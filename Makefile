@@ -1,23 +1,30 @@
-# obj-m is a list of what kernel modules to build.  The .o and other
-# objects will be automatically built from the corresponding .c file -
-# no need to list the source files explicitly.
+################################################################################
+#
+# Common Variables that already set:
+#     LICHEE_KDIR
+#     LICHEE_MOD_DIR
+#     CROSS_COMPILE
+#     ARCH
+#
+#################################################################################
+ARCH:= arm
+CROSS_COMPILE:= /usr/bin/arm-linux-gnueabihf-
 
-obj-m := sunxi_lirc_new.o 
+KDIR:= /home/damien/output/linux-sunxi
 
-# KDIR is the location of the kernel source.  The current standard is
-# to link to the associated source tree from the directory containing
-# the compiled modules.
-#KDIR  := /lib/modules/$(shell uname -r)/build
+PWD=$(shell pwd)
+all: build
+#obj-m:=sunxi-lircnew.o
+#obj-m+=sunxi-ir.o
+#obj-m:=sunxi-lirc.o
+obj-m+=sunxi_lirc_new.o
+#install: build
+#	cp spi-sunxi-slave.ko $(LICHEE_MOD_DIR)/
 
-# PWD is the current working directory and the location of our module
-# source files.
-PWD   := $(shell pwd)
+build:
+	@echo $(LICHEE_KDIR)
+#	$(MAKE) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) -C $(LICHEE_KDIR) M=$(PWD) modules
+	$(MAKE) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) -C $(KDIR) M=$(PWD)
 
-KDIR  := $(PWD)/..
-
-
-# default is the default make target.  The rule here says to run make
-# with a working directory of the directory containing the kernel
-# source and compile only the modules in the PWD (local) directory.
-default:
-	$(MAKE) -C $(KDIR) M=$(PWD) modules
+clean:
+	@rm -rf *.o *.ko .*.cmd *.mod.c *.order *.symvers .tmp_versions *~
