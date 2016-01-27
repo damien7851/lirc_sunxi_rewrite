@@ -16,9 +16,7 @@ static struct sunxi_ir* ir;
 /* buffer de lirc */
 static struct lirc_buffer rbuf;
 static struct platform_driver sunxi_ir_driver = {
-	.probe          = sunxi_ir_probe,
-	.remove         = sunxi_ir_remove,
-	.driver = {
+		.driver = {
 		.name = LIRC_DRIVER_NAME,
 		.owner = THIS_MODULE,
 	},
@@ -174,7 +172,7 @@ static void set_use_dec(void* data) {
 
 /* end of lirc device/driver stuff */
 
-static int sunxi_ir_probe(struct platform_device * pdev) {
+static int __init sunxi_ir_probe(void) {
 	int ret = 0;
 	unsigned long tmp = 0;
 	/* Init read buffer. */
@@ -302,7 +300,7 @@ static int sunxi_ir_probe(struct platform_device * pdev) {
 	return ret;
 }
 
-static int sunxi_ir_remove(struct platform_device * pdev) {
+static int __exit sunxi_ir_remove(void) {
 	unsigned long flags;
 	/* libération de l'irq*/
 	free_irq(IR_IRQNO, (void*) 0);
@@ -331,9 +329,9 @@ static int sunxi_ir_remove(struct platform_device * pdev) {
 }
 
 
-module_platform_driver(sunxi_ir_driver); //remplace les init et exit pratique!
-//module_init(ir_init);
-//module_exit(ir_exit);
+//module_platform_driver(sunxi_ir_driver); //remplace les init et exit pratique! marche pas
+module_init(sunxi_ir_probe);
+module_exit(sunxi_ir_remove);
 
 MODULE_DESCRIPTION("Remote IR driver");
 MODULE_AUTHOR("Matthias Hoelling / Damien Pageot ");
