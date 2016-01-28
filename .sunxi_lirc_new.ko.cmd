@@ -1,1 +1,0 @@
-cmd_/home/damien/lirc_sunxi_rewrite/sunxi_lirc_new.ko := /usr/bin/arm-linux-gnueabihf-ld -EL -r  -T /home/damien/output/linux-sunxi/scripts/module-common.lds --build-id  -o /home/damien/lirc_sunxi_rewrite/sunxi_lirc_new.ko /home/damien/lirc_sunxi_rewrite/sunxi_lirc_new.o /home/damien/lirc_sunxi_rewrite/sunxi_lirc_new.mod.o

@@ -7,7 +7,7 @@
 
 #ifndef SUNXI_LIRC_NEW_H_
 #define SUNXI_LIRC_NEW_H_
-
+#define DEBUG
 #include <linux/module.h>
 #include <linux/errno.h>
 #include <linux/init.h>
@@ -31,11 +31,14 @@
 
 #include <linux/clk.h>
 #include <linux/bitops.h> // utilitaire pour les opération sur les bits (masques etc)
-
+#ifdef DEBUG
+#include <linux/debugfs.h>
+#include <linux/fs.h>
+#endif
 #define LIRC_DRIVER_NAME "sunxi_lirc_new"
 #define RBUF_LEN 256 // longueur du buffer raw c'est ici qu'es vidé la fifo
-
-
+/* le symbole LIRC permet de compilé le lien avec lirc_dev ce qui permet de débugger séparément*/
+//#define LIRC
 /* Registers */
 #if 1
 /* base ir register */
