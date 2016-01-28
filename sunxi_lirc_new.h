@@ -136,7 +136,9 @@ struct sunxi_ir {
 	struct ir_raw_buffer rawbuf;
 	};
 static inline int ir_packet_handler(struct sunxi_ir *ir,struct lirc_buffer *buffer);
+#ifdef LIRC
 static long lirc_ioctl(struct file *filep, unsigned int cmd, unsigned long arg);
+#endif
 static int set_use_inc(void* data);
 static void set_use_dec(void* data);
 

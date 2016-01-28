@@ -51,7 +51,7 @@ static struct platform_driver sunxi_ir_driver = {
 		.owner = THIS_MODULE,
 	},
 };
-
+#ifdef LIRC
 static const struct file_operations lirc_fops = {
         .owner                = THIS_MODULE,
         .unlocked_ioctl        = lirc_ioctl,
@@ -77,7 +77,7 @@ static struct lirc_driver driver = {
         .dev                = NULL,
         .owner                = THIS_MODULE,
 };
-
+#endif
 static inline int ir_packet_handler(struct sunxi_ir *ir,struct lirc_buffer *buffer){
 
 unsigned char pulse;
@@ -215,8 +215,10 @@ static int __init sunxi_ir_probe(void) {
 	    This requires read and write file operations */
 	    fileret = debugfs_create_file("log", 0644, dirret, &filevalue, &fops_debug);
 #endif
-	int ret = 0;
-	unsigned long tmp = 0;
+	int ret;
+	ret= 0;
+	unsigned long tmp;
+	tmp = 0;
 	/* Init read buffer. */
 #ifdef LIRC
 	ret = lirc_buffer_init(&rbuf, sizeof(int), RBUF_LEN);
