@@ -9,10 +9,10 @@
 #################################################################################
 ARCH:= arm
 CROSS_COMPILE:= /usr/bin/arm-linux-gnueabihf-
-
-KDIR:= /home/damien/output/linux-sunxi
-
 PWD=$(shell pwd)
+KDIR:= $(PWD)/..
+
+
 all: build
 #obj-m:=sunxi-lircnew.o
 #obj-m+=sunxi-ir.o

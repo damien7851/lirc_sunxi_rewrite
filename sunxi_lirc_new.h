@@ -115,8 +115,8 @@ fmt, ## args);                        \
        (((~0UL) << (l)) & (~0UL >> (BITS_PER_LONG - 1 - (h))))
 #endif
 /* déclaration des fonction d'initailisation */
-//static int sunxi_ir_probe(struct platform_device * pdev);
-//static int sunxi_ir_remove(struct platform_device * pdev);
+static int sunxi_ir_probe(struct platform_device * pdev);
+static int sunxi_ir_remove(struct platform_device * pdev);
 /* les données du driver */
 
 struct ir_raw_pulse {
