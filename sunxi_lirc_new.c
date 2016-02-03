@@ -6,8 +6,38 @@
  */
 
 #include "sunxi_lirc_new.h"
-
+#ifndef DEBUG
 static int debug=0;
+#else
+static int debug=1;
+#define len 200
+u32 intvalue,hexvalue;
+struct dentry *dirret,*fileret,*u32int,*u32hex;
+char ker_buf[len];
+int filevalue;
+/* read file operation */
+static ssize_t myreader(struct file *fp, char __user *user_buffer,
+                                size_t count, loff_t *position)
+{
+     return simple_read_from_buffer(user_buffer, count, position, ker_buf, len);
+}
+
+/* write file operation */
+static ssize_t mywriter(struct file *fp, const char __user *user_buffer,
+                                size_t count, loff_t *position)
+{
+        if(count > len )
+                return -EINVAL;
+
+        return simple_write_to_buffer(ker_buf, len, position, user_buffer, count);
+}
+
+static const struct file_operations fops_debug = {
+        .read = myreader,
+        .write = mywriter,
+};
+#endif
+
 
 /* le driver lui même */
 static struct platform_device *lirc_sunxi_dev;
@@ -16,14 +46,12 @@ static struct sunxi_ir* ir;
 /* buffer de lirc */
 static struct lirc_buffer rbuf;
 static struct platform_driver sunxi_ir_driver = {
-	.probe          = sunxi_ir_probe,
-	.remove         = sunxi_ir_remove,
-	.driver = {
+		.driver = {
 		.name = LIRC_DRIVER_NAME,
 		.owner = THIS_MODULE,
 	},
 };
-
+#ifdef LIRC
 static const struct file_operations lirc_fops = {
         .owner                = THIS_MODULE,
         .unlocked_ioctl        = lirc_ioctl,
@@ -49,7 +77,7 @@ static struct lirc_driver driver = {
         .dev                = NULL,
         .owner                = THIS_MODULE,
 };
-
+#endif
 static inline int ir_packet_handler(struct sunxi_ir *ir,struct lirc_buffer *buffer){
 
 unsigned char pulse;
@@ -79,7 +107,9 @@ unsigned int index = 0;
 				ir->rawbuf.buf[index].duration |= PULSE_BIT; // on met le pulse à 1
 			else
 				ir->rawbuf.buf[index].duration &= PULSE_MASK; //on met le pulse à 0
+#ifdef LIRC
 			lirc_buffer_write(buffer,(unsigned char*)&ir->rawbuf.buf[index].duration);
+#endif
 		}
 	}
 
@@ -133,6 +163,7 @@ static irqreturn_t sunxi_ir_irq(int irqno, void *dev_id)
 	return IRQ_HANDLED;
 }
 /* control de lirc */
+#ifdef LIRC
 static long lirc_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
 
@@ -163,6 +194,7 @@ static long lirc_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
         }
         return 0;
 }
+#endif
 /*set_use_inc will be called after device is opened*/
 static int set_use_inc(void* data) {
 	return 0;
@@ -174,10 +206,21 @@ static void set_use_dec(void* data) {
 
 /* end of lirc device/driver stuff */
 
-static int sunxi_ir_probe(struct platform_device * pdev) {
-	int ret = 0;
-	unsigned long tmp = 0;
+static int __init sunxi_ir_probe(void) {
+#ifdef DEBUG
+	/* create a directory by the name dell in /sys/kernel/debugfs */
+	    dirret = debugfs_create_dir("sunxi_lirc_new", NULL);
+
+	    /* create a file in the above directory
+	    This requires read and write file operations */
+	    fileret = debugfs_create_file("log", 0644, dirret, &filevalue, &fops_debug);
+#endif
+	int ret;
+	ret= 0;
+	unsigned long tmp;
+	tmp = 0;
 	/* Init read buffer. */
+#ifdef LIRC
 	ret = lirc_buffer_init(&rbuf, sizeof(int), RBUF_LEN);
 	if (ret < 0)
 		return -ENOMEM;
@@ -200,6 +243,7 @@ static int sunxi_ir_probe(struct platform_device * pdev) {
 		platform_device_put(lirc_sunxi_dev);
 		goto exit_driver_unregister;
 	}
+#endif
 	/* initialisation du vérroulliage d'execution
 	 * ce n'était pas présent avant */
 		spin_lock_init(&ir->ir_lock);
@@ -269,6 +313,7 @@ static int sunxi_ir_probe(struct platform_device * pdev) {
 	printk(KERN_INFO "initialized sunXi IR driver\n");
 
 	printk("IR Initial OK\n");
+#ifdef LIRC
 	// 'driver' is the lirc driver
 	driver.features = LIRC_CAN_SEND_PULSE | LIRC_CAN_REC_MODE2;
 
@@ -284,6 +329,7 @@ static int sunxi_ir_probe(struct platform_device * pdev) {
 	}
 
 	printk(KERN_INFO LIRC_DRIVER_NAME ": driver registered!\n");
+#endif
 	// normalment on sort ici
 	return 0; //sortie normale
 	exit_free_irq:
@@ -302,7 +348,7 @@ static int sunxi_ir_probe(struct platform_device * pdev) {
 	return ret;
 }
 
-static int sunxi_ir_remove(struct platform_device * pdev) {
+static int __exit sunxi_ir_remove(void) {
 	unsigned long flags;
 	/* libération de l'irq*/
 	free_irq(IR_IRQNO, (void*) 0);
@@ -319,7 +365,7 @@ static int sunxi_ir_remove(struct platform_device * pdev) {
 	/* disable IR */
 	writel(0, ir->base + SUNXI_IR_CTL_REG);
 	spin_unlock_irqrestore(&ir->ir_lock, flags);
-
+#ifdef LIRC
 	platform_device_unregister(lirc_sunxi_dev);
 
 	platform_driver_unregister(&sunxi_ir_driver);
@@ -327,13 +373,17 @@ static int sunxi_ir_remove(struct platform_device * pdev) {
 	lirc_buffer_free(&rbuf);
 	lirc_unregister_driver(driver.minor);
 	printk(KERN_INFO LIRC_DRIVER_NAME ": cleaned up module\n");
+#endif
+#ifdef DEBUG
+	debugfs_remove_recursive(dirret);
+#endif
 	return 0;
 }
 
 
-module_platform_driver(sunxi_ir_driver); //remplace les init et exit pratique!
-//module_init(ir_init);
-//module_exit(ir_exit);
+//module_platform_driver(sunxi_ir_driver); //remplace les init et exit pratique! marche pas
+module_init(sunxi_ir_probe);
+module_exit(sunxi_ir_remove);
 
 MODULE_DESCRIPTION("Remote IR driver");
 MODULE_AUTHOR("Matthias Hoelling / Damien Pageot ");

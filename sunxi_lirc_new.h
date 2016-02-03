@@ -7,7 +7,7 @@
 
 #ifndef SUNXI_LIRC_NEW_H_
 #define SUNXI_LIRC_NEW_H_
-
+#define DEBUG
 #include <linux/module.h>
 #include <linux/errno.h>
 #include <linux/init.h>
@@ -31,11 +31,14 @@
 
 #include <linux/clk.h>
 #include <linux/bitops.h> // utilitaire pour les opération sur les bits (masques etc)
-
+#ifdef DEBUG
+#include <linux/debugfs.h>
+#include <linux/fs.h>
+#endif
 #define LIRC_DRIVER_NAME "sunxi_lirc_new"
 #define RBUF_LEN 256 // longueur du buffer raw c'est ici qu'es vidé la fifo
-
-
+/* le symbole LIRC permet de compilé le lien avec lirc_dev ce qui permet de débugger séparément*/
+//#define LIRC
 /* Registers */
 #if 1
 /* base ir register */
@@ -112,8 +115,8 @@ fmt, ## args);                        \
        (((~0UL) << (l)) & (~0UL >> (BITS_PER_LONG - 1 - (h))))
 #endif
 /* déclaration des fonction d'initailisation */
-static int sunxi_ir_probe(struct platform_device * pdev);
-static int sunxi_ir_remove(struct platform_device * pdev);
+//static int sunxi_ir_probe(struct platform_device * pdev);
+//static int sunxi_ir_remove(struct platform_device * pdev);
 /* les données du driver */
 
 struct ir_raw_pulse {
@@ -133,7 +136,9 @@ struct sunxi_ir {
 	struct ir_raw_buffer rawbuf;
 	};
 static inline int ir_packet_handler(struct sunxi_ir *ir,struct lirc_buffer *buffer);
+#ifdef LIRC
 static long lirc_ioctl(struct file *filep, unsigned int cmd, unsigned long arg);
+#endif
 static int set_use_inc(void* data);
 static void set_use_dec(void* data);
 
