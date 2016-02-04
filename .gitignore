@@ -3,3 +3,5 @@ Module.symvers
 modules.order
 *.ko*
 *~
+*.tmp*
+*.mod*

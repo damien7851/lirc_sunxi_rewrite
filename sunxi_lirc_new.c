@@ -4,8 +4,40 @@
  *  Created on: 21 janv. 2016
  *      Author: K005425
  */
+#ifndef SUNXI_LIRC_NEW_H_
+#define SUNXI_LIRC_NEW_H_
+#define DEBUG
+#define LIRC
+#include <linux/module.h>
+#include <linux/errno.h>
+#include <linux/init.h>
+#include <linux/sched.h>
+#include <linux/delay.h>
+#include <linux/platform_device.h>
+#include <linux/interrupt.h>
+#include <linux/ioport.h>
+#include <linux/spinlock.h>
+#include <asm/irq.h>
+#include <linux/io.h>
+#include <linux/slab.h>
+#include <mach/clock.h>
+#include <media/lirc.h>
+#include <media/lirc_dev.h>
 
+#include <mach/irqs.h>
+#include <mach/system.h>
+#include <mach/hardware.h>
+#include <plat/sys_config.h>
+
+#include <linux/clk.h>
+#include <linux/bitops.h> // utilitaire pour les opération sur les bits (masques etc)
+#ifdef DEBUG
+#include <linux/debugfs.h>
+#include <linux/fs.h>
+#endif
 #include "sunxi_lirc_new.h"
+#define DEBUG
+#define LIRC
 #ifndef DEBUG
 static int debug=0;
 #else
@@ -41,19 +73,25 @@ static const struct file_operations fops_debug = {
 
 /* le driver lui même */
 static struct platform_device *lirc_sunxi_dev;
-static struct sunxi_ir* ir;
+//static struct sunxi_ir* ir;
 
 /* buffer de lirc */
 static struct lirc_buffer rbuf;
-static struct platform_driver sunxi_ir_driver =
-{
-    .driver = {
-        .name = LIRC_DRIVER_NAME,
-        .owner = THIS_MODULE,
-    },
-    .remove =sunxi_ir_remove,
-    .probe =sunxi_ir_probe
+
+static const struct of_device_id sunxi_ir_match[] = {
+	{ .compatible = "allwinner,sun4i-a10-ir,sun7i-cubietruck", },
+	{},
 };
+static struct platform_driver sunxi_ir_driver = {
+	.probe          = sunxi_ir_probe,
+	.remove         = sunxi_ir_remove,
+	.driver = {
+		.name = LIRC_DRIVER_NAME,
+		.owner = THIS_MODULE,
+		.of_match_table = sunxi_ir_match,
+	},
+};
+
 #ifdef LIRC
 static const struct file_operations lirc_fops = {
         .owner                = THIS_MODULE,
@@ -128,7 +166,7 @@ static irqreturn_t sunxi_ir_irq(int irqno, void *dev_id)
 	unsigned char dt;
 	unsigned int cnt, rc;
 	struct ir_raw_pulse rawir;
-
+    struct sunxi_ir *ir = dev_id;
 	spin_lock(&ir->ir_lock); //vérrouille l'execution
 	status = readl(ir->base + SUNXI_IR_RXSTA_REG);
 
@@ -209,11 +247,20 @@ static void set_use_dec(void* data) {
 
 /* end of lirc device/driver stuff */
 
-static int sunxi_ir_probe(struct platform_device * pdev) {
-int ret;
-unsigned long tmp;
-ret= 0;
-tmp = 0;
+static int sunxi_ir_probe(struct platform_device * pdev)
+{
+    int ret;
+    unsigned long tmp;
+    struct device *dev = &pdev->dev;
+//struct device_node *dn = dev->of_node;
+    struct sunxi_ir *ir;
+
+    ret= 0;
+    tmp = 0;
+    ir = devm_kzalloc(dev, sizeof(struct sunxi_ir), GFP_KERNEL);
+    if (!ir)
+        return -ENOMEM;
+
 #ifdef DEBUG
 	/* create a directory by the name dell in /sys/kernel/debugfs */
 	    dirret = debugfs_create_dir("sunxi_lirc_new", NULL);
@@ -290,6 +337,8 @@ tmp = 0;
 	if (clk_enable(ir->clk))
 		printk("try to enable apb_ir_clk failed\n");
 
+    platform_set_drvdata(pdev, ir);
+
 	/* Enable CIR Mode */
 	writel(REG_CTL_MD, ir->base + SUNXI_IR_CTL_REG);
 
@@ -355,6 +404,8 @@ tmp = 0;
 
 static int sunxi_ir_remove(struct platform_device * pdev) {
 	unsigned long flags;
+
+	struct sunxi_ir *ir = platform_get_drvdata(pdev);
 	/* libération de l'irq*/
 	free_irq(IR_IRQNO, (void*) 0);
 	gpio_release(ir->irq, 2);
