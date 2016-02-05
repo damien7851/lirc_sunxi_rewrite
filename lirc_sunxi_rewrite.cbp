@@ -29,7 +29,7 @@
 				<MakeCommands>
 					<Build command="$make -j 2" />
 					<CompileFile command="" />
-					<Clean command="" />
+					<Clean command="$make clean" />
 					<DistClean command="$make -f $makefile distclean$target" />
 					<AskRebuildNeeded command="" />
 					<SilentBuild command="$make -j 2 &gt; $(CMD_NULL)" />
@@ -68,6 +68,7 @@
 		<Extensions>
 			<code_completion>
 				<search_path add="/media/ubuntu/SUNXI/linux-sunxi/" />
+				<search_path add="../lirc_sunxi_rewrite" />
 			</code_completion>
 			<debugger />
 		</Extensions>

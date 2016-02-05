@@ -16,8 +16,8 @@ KDIR:= $(PWD)/..
 all: build
 #obj-m:=sunxi-lircnew.o
 #obj-m+=sunxi-cir.o
-obj-m+=sunxi-lirc.o
-#obj-m+=sunxi_lirc_new.o
+#obj-m+=sunxi-lirc.o
+obj-m+=sunxi_lirc_new.o
 #install: build
 #	cp spi-sunxi-slave.ko $(LICHEE_MOD_DIR)/
 

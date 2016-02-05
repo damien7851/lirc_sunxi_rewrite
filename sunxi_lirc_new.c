@@ -4,10 +4,7 @@
  *  Created on: 21 janv. 2016
  *      Author: K005425
  */
-#ifndef SUNXI_LIRC_NEW_H_
-#define SUNXI_LIRC_NEW_H_
 #define DEBUG
-#define LIRC
 #include <linux/module.h>
 #include <linux/errno.h>
 #include <linux/init.h>
@@ -259,6 +256,7 @@ static int sunxi_ir_probe(struct platform_device * pdev)
 
     ret= 0;
     tmp = 0;
+    pdev->name = LIRC_DRIVER_NAME;
     ir = devm_kzalloc(dev, sizeof(struct sunxi_ir), GFP_KERNEL);
     if (!ir)
         return -ENOMEM;

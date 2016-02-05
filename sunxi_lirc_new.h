@@ -4,8 +4,9 @@
  *  Created on: 22 janv. 2016
  *      Author: k005425
  */
-
-
+#ifndef SUNXI_LIRC_NEW_H_
+#define SUNXI_LIRC_NEW_H_
+#define LIRC
 #define LIRC_DRIVER_NAME "sunxi_lirc_new"
 #define RBUF_LEN 256 // longueur du buffer raw c'est ici qu'es vidé la fifo
 /* le symbole LIRC permet de compilé le lien avec lirc_dev ce qui permet de débugger séparément*/
