@@ -23,9 +23,6 @@
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
-				<ExtraCommands>
-					<Add after="scp sunxi_lirc_new.ko cubie@cubietruck:sunxi_lirc_new.ko" />
-				</ExtraCommands>
 				<Environment>
 					<Variable name="KDIR" value="$(pwd)/.." />
 				</Environment>

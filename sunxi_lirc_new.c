@@ -82,26 +82,28 @@ static const struct of_device_id sunxi_ir_match[] = {
 	{ .compatible = "allwinner,sun4i-a10-ir,sun7i-cubietruck", },
 	{},
 };
-static struct platform_driver sunxi_ir_driver = {
-	.probe          = sunxi_ir_probe,
-	.remove         = sunxi_ir_remove,
-	.driver = {
-		.name = LIRC_DRIVER_NAME,
-		.owner = THIS_MODULE,
-		.of_match_table = sunxi_ir_match,
-	},
+static struct platform_driver sunxi_ir_driver =
+{
+    .probe          = sunxi_ir_probe,
+    .remove         = sunxi_ir_remove,
+    .driver = {
+        .name = LIRC_DRIVER_NAME,
+        .owner = THIS_MODULE,
+        .of_match_table = sunxi_ir_match,
+    },
 };
 
 #ifdef LIRC
-static const struct file_operations lirc_fops = {
-        .owner                = THIS_MODULE,
-        .unlocked_ioctl        = lirc_ioctl,
-        .read                = lirc_dev_fop_read, // this and the rest is default
-        .write                = lirc_dev_fop_write,
-        .poll                = lirc_dev_fop_poll,
-        .open                = lirc_dev_fop_open,
-        .release        = lirc_dev_fop_close,
-        .llseek                = no_llseek,
+static const struct file_operations lirc_fops =
+{
+    .owner                  = THIS_MODULE,
+    .unlocked_ioctl         = lirc_ioctl,
+    .read                   = lirc_dev_fop_read, // this and the rest is default
+    .write                  = lirc_dev_fop_write,
+    .poll                   = lirc_dev_fop_poll,
+    .open                   = lirc_dev_fop_open,
+    .release                = lirc_dev_fop_close,
+    .llseek                 = no_llseek,
 };
 
 static struct lirc_driver driver = {
