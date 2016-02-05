@@ -1,0 +1,3 @@
+version modifié du make file et du kconfig pour compilé le driver "in tree"
+fair un patch dans
+/drivers/media/rc/
