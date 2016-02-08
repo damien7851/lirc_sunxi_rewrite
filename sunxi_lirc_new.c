@@ -52,8 +52,8 @@
 #include <linux/clk.h>
 #include <linux/kfifo.h> //nouveau pour remplacer raw buf
 #include "sunxi_lirc_new.h"
-/* permet d'activer l'utilisation d'une fifo du kernel */
-#define FIFO
+
+
 #define LIRC
 
 static struct platform_device *lirc_sunxi_dev;
@@ -66,71 +66,27 @@ static u32 ir_gpio_hdle;
 
 
 
-#define dprintk(fmt, args...)                                        \
-do {                                                        \
-if (debug)                                        \
-printk(KERN_DEBUG LIRC_DRIVER_NAME ": "        \
-fmt, ## args);                        \
+#define dprintk(fmt, args...)               \
+do {                                        \
+if (debug)                                  \
+printk(KERN_DEBUG LIRC_DRIVER_NAME ": "     \
+fmt, ## args);                              \
 } while (0)
 
 
-#ifdef FIFO
+
 static struct kfifo rawfifo;
-#else
 
-struct ir_raw_buffer {
-	unsigned int dcnt;	/*Packet Count*/
-	unsigned char buf[IR_RAW_BUF_SIZE];
-};
-
-#endif
 static struct lirc_buffer rbuf;
 
 DEFINE_SPINLOCK(sunxi_lirc_spinlock);
 
 
-#ifndef FIFO
-static struct ir_raw_buffer ir_rawbuf;
-#endif
+
 static int debug=0;
 
 
-#ifndef FIFO
-static inline void ir_reset_rawbuffer(void)
-{
-	ir_rawbuf.dcnt = 0;
-}
 
-static inline void ir_write_rawbuffer(unsigned char data)
-{
-	if (ir_rawbuf.dcnt < IR_RAW_BUF_SIZE)
-		ir_rawbuf.buf[ir_rawbuf.dcnt++] = data;
-	else
-		printk("ir_write_rawbuffer: IR Rx buffer full\n");
-}
-/* cette fonction récupéré la derniere valeur entrée du
-coup cela ne sert à rien il faut implément une kfifo à la place
-*/
-static inline unsigned char ir_read_rawbuffer(void)
-{
-	unsigned char data = 0x00;
-
-	if (ir_rawbuf.dcnt > 0)
-		data = ir_rawbuf.buf[--ir_rawbuf.dcnt];
-
-	return data;
-}
-
-static inline int ir_rawbuffer_empty(void)
-{
-	return (ir_rawbuf.dcnt == 0);
-}
-
-static inline int ir_rawbuffer_full(void)
-{
-	return (ir_rawbuf.dcnt >= IR_RAW_BUF_SIZE);
-}
-#endif
 static void ir_clk_cfg(void)
 {
 
@@ -221,11 +177,7 @@ static void ir_reg_cfg(void)
 static void ir_setup(void)
 {
 	dprintk("ir_setup: ir setup start!!\n");
-    #ifndef FIFO
-	ir_reset_rawbuffer();
-	#else
-	kfifo_reset(&rawfifo);
-	#endif
+    kfifo_reset(&rawfifo);
 	ir_sys_cfg();
 	ir_reg_cfg();
 
@@ -302,34 +254,7 @@ static void ir_packet_handler(void)
     return ;
 }
 
-//void ir_packet_handler(unsigned char *buf, unsigned int dcnt)
-//{
-//	unsigned int i;
-//	unsigned  int lirc_val;
-//	dprintk("Buffer length: %d",dcnt);
-//	for(i=0;i<dcnt;i++) {
-////		lirc_val= ((unsigned int) (buf[i] & 0x80) << PULSE_BIT_SHIFTER) | (SAMPLES_TO_US(buf[i] &0x7f));
-////		while((buf[i] & 0x80) == (buf[i+1] & 0x80)) {
-////			lirc_val += SAMPLES_TO_US(buf[++i]&0x7f);
-////		}
-////		/* statistically pulses are one sample period (?) too long, spaces too short */
-////		/* would make sense because of bandpass latency, but not sure... */
-////		lirc_val += (buf[i] & 0x80) ? (-SAMPLES_TO_US(1)) : SAMPLES_TO_US(1);
-////		dprintk("rawbuf: %x, value: %x, level:%d for %d us\n",buf[i],lirc_val,(buf[i]&0x80) ? 1 : 0,lirc_val & PULSE_MASK) ;
-////		/* to do, write to lirc buffer */
-////	    if (lirc_buffer_full(&rbuf)) {
-////	            /* no new signals will be accepted */
-////	            dprintk("Buffer overrun\n");
-////	            return;
-////	    }
-//	    lirc_buffer_write(&rbuf,(unsigned char*)&lirc_val);
-//	}
-//
-//
-//	return;
-//}
 
-//new irq
 static irqreturn_t ir_irq_service(int irqno, void *dev_id)
 {
     unsigned long status;
@@ -352,23 +277,17 @@ static irqreturn_t ir_irq_service(int irqno, void *dev_id)
         {
             /* for each bit in fifo */
             dt = readb(IR_BASE + SUNXI_IR_RXFIFO_REG);
-            //pulse = (dt & 0x80) != 0; // donne la polarité du pulse
-            //duration = ((dt & 0x7f) + 1) * SUNXI_IR_SAMPLE; // et sa durée
-            #ifndef FIFO
-            ir_write_rawbuffer(dt);//si c'est plein on affiche un message et on espere que le suivant sera bon de toute facon c'est mort
-            #else
+
             kfifo_in(&rawfifo,&dt,sizeof(dt));
-            #endif
+
         }
     }
     if (status & REG_RXINT_ROI_EN)
     {
         /* FIFO Overflow */
-        #ifndef FIFO
-        ir_reset_rawbuffer();
-        #else
+
         kfifo_reset(&rawfifo);
-        #endif
+
         dprintk("hardware fifo overflow trame ir perdue");
         overflow_error = 1;
     }
@@ -379,11 +298,8 @@ static irqreturn_t ir_irq_service(int irqno, void *dev_id)
             ir_packet_handler(); /* TODO à modifier pas dbesoin de passer une donnée globale...*/
         else
             overflow_error = 0;// on a atteint le fin de la trame perdu on peu tanter de récupéré la suivante
-        #ifndef FIFO
-        ir_reset_rawbuffer();// dans tous les cas on vide
-        #else
+
         kfifo_reset(&rawfifo);
-        #endif
         wake_up_interruptible(&rbuf.wait_poll);
     }
 
@@ -572,7 +488,7 @@ module_init(ir_init);
 module_exit(ir_exit);
 
 MODULE_DESCRIPTION("Remote IR driver");
-MODULE_AUTHOR("Matthias Hoelling");
+MODULE_AUTHOR("Damien Pageot");
 MODULE_LICENSE("GPL");
 
 module_param(debug, int, S_IRUGO | S_IWUSR);
