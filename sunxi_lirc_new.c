@@ -43,16 +43,18 @@
 #include <media/lirc.h>
 #include <media/lirc_dev.h>
 
+
 #include <mach/irqs.h>
 #include <mach/system.h>
 #include <mach/hardware.h>
 #include <plat/sys_config.h>
 
 #include <linux/clk.h>
-
+#include <linux/kfifo.h> //nouveau pour remplacer raw buf
 #include "sunxi_lirc_new.h"
-
-
+/* permet d'activer l'utilisation d'une fifo du kernel */
+#define FIFO
+#define LIRC
 
 static struct platform_device *lirc_sunxi_dev;
 
@@ -72,25 +74,28 @@ fmt, ## args);                        \
 } while (0)
 
 
-
+#ifdef FIFO
+static struct kfifo rawfifo;
+#else
 
 struct ir_raw_buffer {
 	unsigned int dcnt;	/*Packet Count*/
 	unsigned char buf[IR_RAW_BUF_SIZE];
 };
 
+#endif
 static struct lirc_buffer rbuf;
 
 DEFINE_SPINLOCK(sunxi_lirc_spinlock);
 
 
-
+#ifndef FIFO
 static struct ir_raw_buffer ir_rawbuf;
-
+#endif
 static int debug=0;
 
 
-
+#ifndef FIFO
 static inline void ir_reset_rawbuffer(void)
 {
 	ir_rawbuf.dcnt = 0;
@@ -103,7 +108,9 @@ static inline void ir_write_rawbuffer(unsigned char data)
 	else
 		printk("ir_write_rawbuffer: IR Rx buffer full\n");
 }
-
+/* cette fonction récupéré la derniere valeur entrée du
+coup cela ne sert à rien il faut implément une kfifo à la place
+*/
 static inline unsigned char ir_read_rawbuffer(void)
 {
 	unsigned char data = 0x00;
@@ -123,7 +130,7 @@ static inline int ir_rawbuffer_full(void)
 {
 	return (ir_rawbuf.dcnt >= IR_RAW_BUF_SIZE);
 }
-
+#endif
 static void ir_clk_cfg(void)
 {
 
@@ -214,8 +221,11 @@ static void ir_reg_cfg(void)
 static void ir_setup(void)
 {
 	dprintk("ir_setup: ir setup start!!\n");
-
+    #ifndef FIFO
 	ir_reset_rawbuffer();
+	#else
+	kfifo_reset(&rawfifo);
+	#endif
 	ir_sys_cfg();
 	ir_reg_cfg();
 
@@ -244,41 +254,52 @@ static inline void ir_clr_intsta(unsigned long bitmap)
 }
 
 //new handler
-static void ir_packet_handler(void){
-unsigned char pulse,dt;
-int duration;
-unsigned int index = 0;
-while (!ir_rawbuffer_empty())//tant que le buffer n'est pas vide
+static void ir_packet_handler(void)
 {
-dt = ir_read_rawbuffer(); //on récupére
-pulse = (dt & 0x80) != 0; // donne la polarité du pulse
-duration = ((dt & 0x7f) + 1) * SUNXI_IR_SAMPLE; // et sa durée
+    unsigned char pulse,dt,next_pulse,dt_next;
+    int duration = 0;
 
-/* TODO recoder ci-dessous peut etre avec un static ou un flag ... */
-if (pulse == (ir->rawbuf.buf[index].pulse))
-{
-/*si le pulse est de la méme polarité que le précédent
-* alors on l'additionne au suivant
-*/
-ir->rawbuf.buf[index].duration=ir->rawbuf.buf[index-1].duration+ir->rawbuf.buf[index].duration;
-}
-else
-{
-if (ir->rawbuf.buf[index].duration>PULSE_MASK)
-{
-printk(KERN_INFO "pulse are %d and is too long",ir->rawbuf.buf[index].duration);
-return (-1);
-}
-if (pulse==1)
-ir->rawbuf.buf[index].duration |= PULSE_BIT; // on met le pulse à 1
-else
-ir->rawbuf.buf[index].duration &= PULSE_MASK; //on met le pulse à 0
+
+    while (!kfifo_is_empty(&rawfifo))
+    {
+        if (kfifo_out(&rawfifo,&dt,sizeof(dt))!=1) //kfifi_out lit la valeur et l'enléve de la fifo
+            break;
+
+
+        pulse = (dt & 0x80) != 0; // donne la polarité du pulse
+
+        if (kfifo_out_peek(&rawfifo,&dt_next,sizeof(dt))!=1) //kfifi_out_peek lit la valeur et l'enléve PAS de la fifo
+            break;
+
+        next_pulse = (dt_next & 0x80) != 0;
+
+        if (pulse == next_pulse)
+        {
+            /*si le pulse est de la méme polarité que le suivant
+            * alors on l'additionne au suivant
+            */
+            duration += ((dt_next & 0x7f) + 1) * SUNXI_IR_SAMPLE; // et sa durée
+        }
+        else
+        {
+            if (duration == 0) //cas improblable ou un pulse est plus court que 127 echantillons
+                duration = ((dt & 0x7f) + 1) * SUNXI_IR_SAMPLE; // et sa durée
+
+            if (duration>PULSE_MASK)
+            {
+                printk(KERN_INFO "pulse are %d and is too long",duration);
+                return;
+            }
+            if (pulse==1)
+                duration |= PULSE_BIT; // on met le pulse à 1
+            else
+                duration &= PULSE_MASK; //on met le pulse à 0
 #ifdef LIRC
-lirc_buffer_write(buffer,(unsigned char*)&ir->rawbuf.buf[index].duration);
+            lirc_buffer_write(&rbuf,(unsigned char*)duration);
 #endif
-}
-}
-return 0;
+        }
+    }
+    return ;
 }
 
 //void ir_packet_handler(unsigned char *buf, unsigned int dcnt)
@@ -312,8 +333,8 @@ return 0;
 static irqreturn_t ir_irq_service(int irqno, void *dev_id)
 {
     unsigned long status;
-    unsigned char dt;
-    unsigned int cnt, rc, pulse, duration;
+    unsigned char dt,overflow_error = 0;
+    unsigned int cnt, rc;
 
 
 
@@ -333,18 +354,36 @@ static irqreturn_t ir_irq_service(int irqno, void *dev_id)
             dt = readb(IR_BASE + SUNXI_IR_RXFIFO_REG);
             //pulse = (dt & 0x80) != 0; // donne la polarité du pulse
             //duration = ((dt & 0x7f) + 1) * SUNXI_IR_SAMPLE; // et sa durée
+            #ifndef FIFO
             ir_write_rawbuffer(dt);//si c'est plein on affiche un message et on espere que le suivant sera bon de toute facon c'est mort
+            #else
+            kfifo_in(&rawfifo,&dt,sizeof(dt));
+            #endif
+        }
     }
     if (status & REG_RXINT_ROI_EN)
     {
         /* FIFO Overflow */
+        #ifndef FIFO
         ir_reset_rawbuffer();
+        #else
+        kfifo_reset(&rawfifo);
+        #endif
+        dprintk("hardware fifo overflow trame ir perdue");
+        overflow_error = 1;
     }
     else if (status & REG_RXINT_RPEI_EN)
     {
         /* packet end */
-        ir_packet_handler(); /* TODO à modifier pas dbesoin de passer une donnée globale...*/
-        ir_reset_rawbuffer();
+        if (!overflow_error)
+            ir_packet_handler(); /* TODO à modifier pas dbesoin de passer une donnée globale...*/
+        else
+            overflow_error = 0;// on a atteint le fin de la trame perdu on peu tanter de récupéré la suivante
+        #ifndef FIFO
+        ir_reset_rawbuffer();// dans tous les cas on vide
+        #else
+        kfifo_reset(&rawfifo);
+        #endif
         wake_up_interruptible(&rbuf.wait_poll);
     }
 
@@ -442,6 +481,12 @@ static int __init ir_init(void)
     if (result < 0)
             return -ENOMEM;
 
+    /*init rawfifo */
+
+    result = kfifo_alloc(&rawfifo,IR_RAW_BUF_SIZE,GFP_KERNEL);
+    if (result < 0)
+        return -ENOMEM;
+
     result = platform_driver_register(&lirc_sunxi_driver);
     if (result) {
             printk(KERN_ERR LIRC_DRIVER_NAME
@@ -511,6 +556,7 @@ static void __exit ir_exit(void)
 {
 
 	free_irq(IR_IRQNO, (void*) 0);
+	kfifo_free(&rawfifo);
 	ir_sys_uncfg();
     platform_device_unregister(lirc_sunxi_dev);
 
