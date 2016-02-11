@@ -6,6 +6,7 @@
  */
 
 #include "sunxi_lirc_new.h"
+#define DEBUG
 #ifndef DEBUG
 static int debug=0;
 #else
@@ -110,6 +111,10 @@ unsigned int index = 0;
 #ifdef LIRC
 			lirc_buffer_write(buffer,(unsigned char*)&ir->rawbuf.buf[index].duration);
 #endif
+#ifdef DEBUG
+snprintf(ker_buf,len,"last pulse is %x",pulse);
+
+#endif // DEBUG
 		}
 	}
 
@@ -207,6 +212,10 @@ static void set_use_dec(void* data) {
 /* end of lirc device/driver stuff */
 
 static int __init sunxi_ir_probe(void) {
+    int ret;
+	unsigned long tmp;
+	tmp = 0;
+	ret= 0;
 #ifdef DEBUG
 	/* create a directory by the name dell in /sys/kernel/debugfs */
 	    dirret = debugfs_create_dir("sunxi_lirc_new", NULL);
@@ -215,10 +224,7 @@ static int __init sunxi_ir_probe(void) {
 	    This requires read and write file operations */
 	    fileret = debugfs_create_file("log", 0644, dirret, &filevalue, &fops_debug);
 #endif
-	int ret;
-	ret= 0;
-	unsigned long tmp;
-	tmp = 0;
+
 	/* Init read buffer. */
 #ifdef LIRC
 	ret = lirc_buffer_init(&rbuf, sizeof(int), RBUF_LEN);
@@ -246,11 +252,16 @@ static int __init sunxi_ir_probe(void) {
 #endif
 	/* initialisation du vérroulliage d'execution
 	 * ce n'était pas présent avant */
-		spin_lock_init(&ir->ir_lock);
+	//	spin_lock_init(&ir->ir_lock);
 	/* IRQ dans le driver original les irq sont demander avec les clock*/
 	if (request_irq(IR_IRQNO, sunxi_ir_irq, 0, "RemoteIR", (void*) 0)) {
 		ret = -EBUSY;
+		#ifdef LIRC
 		goto exit_device_unregister;
+		#else
+		goto exit_clkdisable_clk;
+		#endif
+
 	}
 
 	ir->irq = gpio_request_ex("ir_para", "ir0_rx");
@@ -331,15 +342,17 @@ static int __init sunxi_ir_probe(void) {
 	printk(KERN_INFO LIRC_DRIVER_NAME ": driver registered!\n");
 #endif
 	// normalment on sort ici
-	return 0; //sortie normale
+	return ret; //sortie normale
 	exit_free_irq:
 	free_irq(IR_IRQNO, (void*) 0);
+#ifdef LIRC
 	exit_device_unregister:
 	platform_device_unregister(lirc_sunxi_dev);
 	exit_driver_unregister:
 	platform_driver_unregister(&sunxi_ir_driver);
 	exit_buffer_free:
 	lirc_buffer_free(&rbuf);
+#endif
 	exit_clkdisable_clk:
 	clk_put(ir->clk);
 	exit_clkdisable_apb_clk:
@@ -348,7 +361,7 @@ static int __init sunxi_ir_probe(void) {
 	return ret;
 }
 
-static int __exit sunxi_ir_remove(void) {
+static void __exit sunxi_ir_remove(void) {
 	unsigned long flags;
 	/* libération de l'irq*/
 	free_irq(IR_IRQNO, (void*) 0);
@@ -377,7 +390,7 @@ static int __exit sunxi_ir_remove(void) {
 #ifdef DEBUG
 	debugfs_remove_recursive(dirret);
 #endif
-	return 0;
+	return ;
 }
 
 
