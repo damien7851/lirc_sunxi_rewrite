@@ -307,7 +307,6 @@ static irqreturn_t ir_irq_service(int irqno, void *dev_id)
 }
 
 
-
 /* interpret lirc commands */
 static long lirc_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
@@ -386,9 +385,6 @@ static struct platform_driver lirc_sunxi_driver = {
 };
 
 
-
-
-
 static int __init ir_init(void)
 {
 	int result;
@@ -400,14 +396,17 @@ static int __init ir_init(void)
     /*init rawfifo */
 
     result = kfifo_alloc(&rawfifo,IR_RAW_BUF_SIZE,GFP_KERNEL);
-    if (result < 0)
-        return -ENOMEM;
+    if (result < 0){
+            result = -ENOMEM;
+            goto exit_buffer_free;
+    }
+
 
     result = platform_driver_register(&lirc_sunxi_driver);
     if (result) {
             printk(KERN_ERR LIRC_DRIVER_NAME
                    ": lirc register returned %d\n", result);
-            goto exit_buffer_free;
+            goto exit_fifo_free;
     }
 
     lirc_sunxi_dev = platform_device_alloc(LIRC_DRIVER_NAME, 0);
@@ -461,6 +460,9 @@ exit_device_unregister:
 
 exit_driver_unregister:
     platform_driver_unregister(&lirc_sunxi_driver);
+
+exit_fifo_free:
+    kfifo_free(&rawfifo);
 
 exit_buffer_free:
     lirc_buffer_free(&rbuf);
