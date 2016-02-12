@@ -51,9 +51,10 @@
 
 #include <linux/clk.h>
 #include <linux/kfifo.h> //nouveau pour remplacer raw buf
+//#include <linux/jiffies.h> //por recupéré le temps
 #include "sunxi_lirc_new.h"
 
-
+//#define FIFO  pour enlever la fifo...
 #define LIRC
 
 static struct platform_device *lirc_sunxi_dev;
@@ -61,7 +62,7 @@ static struct platform_device *lirc_sunxi_dev;
 static struct clk *apb_ir_clk;
 static struct clk *ir_clk;
 static u32 ir_gpio_hdle;
-
+//static unsigned long time;
 
 
 
@@ -211,7 +212,7 @@ static void ir_packet_handler(void)
     unsigned char pulse,dt,next_pulse,dt_next;
     int duration = 0;
 
-
+    #ifdef FIFO
     while (!kfifo_is_empty(&rawfifo))
     {
         if (kfifo_out(&rawfifo,&dt,sizeof(dt))!=1) //kfifi_out lit la valeur et l'enléve de la fifo
@@ -251,6 +252,9 @@ static void ir_packet_handler(void)
 #endif
         }
     }
+    #else
+    printk(KERN_INFO "FIFO désactivé mode test")
+    #endif
     return ;
 }
 
@@ -277,17 +281,20 @@ static irqreturn_t ir_irq_service(int irqno, void *dev_id)
         {
             /* for each bit in fifo */
             dt = readb(IR_BASE + SUNXI_IR_RXFIFO_REG);
-
+            #ifdef FIFO
             kfifo_in(&rawfifo,&dt,sizeof(dt));
+            #else
+            dprintk("donnée brute : %x",dt); //c'est violent...
+            #endif
 
         }
     }
     if (status & REG_RXINT_ROI_EN)
     {
         /* FIFO Overflow */
-
+        #ifdef FIFO
         kfifo_reset(&rawfifo);
-
+        #endif
         dprintk("hardware fifo overflow trame ir perdue");
         overflow_error = 1;
     }
@@ -298,8 +305,9 @@ static irqreturn_t ir_irq_service(int irqno, void *dev_id)
             ir_packet_handler(); /* TODO à modifier pas dbesoin de passer une donnée globale...*/
         else
             overflow_error = 0;// on a atteint le fin de la trame perdu on peu tanter de récupéré la suivante
-
+        #ifdef FIFO
         kfifo_reset(&rawfifo);
+        #endif
         wake_up_interruptible(&rbuf.wait_poll);
     }
 
@@ -387,6 +395,8 @@ static struct platform_driver lirc_sunxi_driver = {
 
 static int __init ir_init(void)
 {
+
+    //time = jiffies;
 	int result;
     /* Init read buffer. */
     result = lirc_buffer_init(&rbuf, sizeof(int), RBUF_LEN);
@@ -448,7 +458,8 @@ static int __init ir_init(void)
         }
 
         printk(KERN_INFO LIRC_DRIVER_NAME ": driver registered!\n");
-
+//time -= jiffies;
+//printk(KERN_INFO LIRC_DRIVER_NAME ": init time = %d");
     return 0;
 
 

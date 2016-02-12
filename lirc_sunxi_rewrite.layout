@@ -2,24 +2,24 @@
 <CodeBlocks_layout_file>
 	<FileVersion major="1" minor="0" />
 	<ActiveTarget name="Debug" />
-	<File name="../output/linux-sunxi/include/media/lirc.h" open="1" top="0" tabpos="3" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="0" topLine="0" />
-		</Cursor>
-	</File>
 	<File name="../output/linux-sunxi/include/media/lirc_dev.h" open="1" top="0" tabpos="4" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
 			<Cursor1 position="234" topLine="0" />
 		</Cursor>
 	</File>
-	<File name="sunxi_lirc_new.h" open="1" top="1" tabpos="1" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="sunxi_lirc_new.h" open="1" top="0" tabpos="1" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="222" topLine="51" />
+			<Cursor1 position="222" topLine="111" />
 		</Cursor>
 	</File>
-	<File name="sunxi_lirc_new.c" open="1" top="0" tabpos="2" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="../output/linux-sunxi/include/media/lirc.h" open="1" top="0" tabpos="3" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="10434" topLine="234" />
+			<Cursor1 position="0" topLine="0" />
+		</Cursor>
+	</File>
+	<File name="sunxi_lirc_new.c" open="1" top="1" tabpos="2" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="5327" topLine="97" />
 		</Cursor>
 		<Folding>
 			<Collapse line="90" />
@@ -33,12 +33,7 @@
 			<Collapse line="189" />
 			<Collapse line="194" />
 			<Collapse line="199" />
-			<Collapse line="311" />
-			<Collapse line="342" />
-			<Collapse line="346" />
-			<Collapse line="350" />
-			<Collapse line="361" />
 		</Folding>
 	</File>
-	<EditorTabsLayout layout="048d43b056b8610e0038ba6900000002=*0;lirc_sunxi_rewrite:sunxi_lirc_new.h,1;lirc_sunxi_rewrite:sunxi_lirc_new.c,2;@layout2|name=dummy;caption=;state=2098174;dir=3;layer=0;row=0;pos=0;prop=100000;bestw=469;besth=284;minw=469;minh=284;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|name=048d43b056b8610e0038ba6900000002;caption=;state=2098172;dir=5;layer=0;row=0;pos=0;prop=100000;bestw=200;besth=200;minw=-1;minh=-1;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|dock_size(5,0,0)=202|" />
+	<EditorTabsLayout layout="06125fe056bda18700398cc500000002=0;lirc_sunxi_rewrite:sunxi_lirc_new.h,*1;lirc_sunxi_rewrite:sunxi_lirc_new.c@layout2|name=dummy;caption=;state=2098174;dir=3;layer=0;row=0;pos=0;prop=100000;bestw=430;besth=283;minw=430;minh=283;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|name=06125fe056bda18700398cc500000002;caption=;state=2098172;dir=5;layer=0;row=0;pos=0;prop=100000;bestw=200;besth=200;minw=-1;minh=-1;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|dock_size(5,0,0)=202|" />
 </CodeBlocks_layout_file>
