@@ -253,9 +253,9 @@ static void ir_packet_handler(void)
         }
     }
     #else
-    printk(KERN_INFO "FIFO désactivé mode test")
+    printk(KERN_INFO "FIFO désactivé mode test");
     #endif
-    return ;
+    return;
 }
 
 
