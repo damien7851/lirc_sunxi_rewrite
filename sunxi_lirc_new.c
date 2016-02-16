@@ -54,7 +54,7 @@
 //#include <linux/jiffies.h> //por recupéré le temps
 #include "sunxi_lirc_new.h"
 
-//#define FIFO  pour enlever la fifo...
+#define FIFO  //pour enlever la fifo...
 #define LIRC
 
 static struct platform_device *lirc_sunxi_dev;
@@ -186,26 +186,7 @@ static void ir_setup(void)
 
 	return;
 }
-/*
-static inline unsigned char ir_get_data(void)
-{
-	return (unsigned char)(readl(IR_BASE + SUNXI_IR_RXFIFO_REG));
-}
 
-static inline unsigned long ir_get_intsta(void)
-{
-	return readl(IR_BASE + SUNXI_IR_RXSTA_REG);
-}
-
-static inline void ir_clr_intsta(unsigned long bitmap)
-{
-	unsigned long tmp = readl(IR_BASE + SUNXI_IR_RXSTA_REG);
-
-	tmp &= ~0xff;
-	tmp |= bitmap&0xff;
-	writel(tmp, IR_BASE + SUNXI_IR_RXSTA_REG);
-}
-*/
 //new handler
 static void ir_packet_handler(void)
 {
@@ -215,7 +196,7 @@ static void ir_packet_handler(void)
     #ifdef FIFO
     while (!kfifo_is_empty(&rawfifo))
     {
-        if (kfifo_out(&rawfifo,&dt,sizeof(dt))!=1) //kfifi_out lit la valeur et l'enléve de la fifo
+        if (kfifo_out(&rawfifo,&dt,sizeof(dt))!=1) //kfifo_out lit la valeur et l'enléve de la fifo
             break;
 
 
@@ -248,7 +229,7 @@ static void ir_packet_handler(void)
             else
                 duration &= PULSE_MASK; //on met le pulse à 0
 #ifdef LIRC
-            lirc_buffer_write(&rbuf,(unsigned char*)duration);
+            lirc_buffer_write(&rbuf,(unsigned char*)&duration);
 #endif
         }
     }
@@ -282,9 +263,12 @@ static irqreturn_t ir_irq_service(int irqno, void *dev_id)
             /* for each bit in fifo */
             dt = readb(IR_BASE + SUNXI_IR_RXFIFO_REG);
             #ifdef FIFO
-            kfifo_in(&rawfifo,&dt,sizeof(dt));
-            #else
-            dprintk("donnée brute : %x",dt); //c'est violent...
+            if (kfifo_in(&rawfifo,&dt,sizeof(dt))!=sizeof(dt)){
+            dprintk("raw fifo full ir frame lost");
+            kfifo_reset(&rawfifo);
+            overflow_error = 1;
+
+            }
             #endif
 
         }
