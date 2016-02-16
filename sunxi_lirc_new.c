@@ -186,7 +186,7 @@ static void ir_setup(void)
 
 	return;
 }
-
+/*
 static inline unsigned char ir_get_data(void)
 {
 	return (unsigned char)(readl(IR_BASE + SUNXI_IR_RXFIFO_REG));
@@ -205,7 +205,7 @@ static inline void ir_clr_intsta(unsigned long bitmap)
 	tmp |= bitmap&0xff;
 	writel(tmp, IR_BASE + SUNXI_IR_RXSTA_REG);
 }
-
+*/
 //new handler
 static void ir_packet_handler(void)
 {
