@@ -8,7 +8,7 @@
 #define SUNXI_LIRC_NEW_H_
 #define LIRC
 #define LIRC_DRIVER_NAME "sunxi_lirc_new"
-#define IR_RAW_BUF_SIZE 128
+#define IR_RAW_BUF_SIZE 512
 #define RBUF_LEN 256 // longueur du buffer raw c'est ici qu'es vidé la fifo
 /* le symbole LIRC permet de compilé le lien avec lirc_dev ce qui permet de débugger séparément*/
 //#define LIRC

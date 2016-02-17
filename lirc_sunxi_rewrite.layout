@@ -7,9 +7,21 @@
 			<Cursor1 position="234" topLine="0" />
 		</Cursor>
 	</File>
+	<File name="sunxi_lirc_new.c" open="1" top="1" tabpos="2" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="5058" topLine="121" />
+		</Cursor>
+		<Folding>
+			<Collapse line="91" />
+			<Collapse line="122" />
+			<Collapse line="129" />
+			<Collapse line="140" />
+			<Collapse line="150" />
+		</Folding>
+	</File>
 	<File name="sunxi_lirc_new.h" open="1" top="0" tabpos="1" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="222" topLine="111" />
+			<Cursor1 position="226" topLine="81" />
 		</Cursor>
 	</File>
 	<File name="../output/linux-sunxi/include/media/lirc.h" open="1" top="0" tabpos="3" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
@@ -17,23 +29,5 @@
 			<Cursor1 position="0" topLine="0" />
 		</Cursor>
 	</File>
-	<File name="sunxi_lirc_new.c" open="1" top="1" tabpos="2" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="5327" topLine="97" />
-		</Cursor>
-		<Folding>
-			<Collapse line="90" />
-			<Collapse line="97" />
-			<Collapse line="103" />
-			<Collapse line="121" />
-			<Collapse line="128" />
-			<Collapse line="139" />
-			<Collapse line="149" />
-			<Collapse line="177" />
-			<Collapse line="189" />
-			<Collapse line="194" />
-			<Collapse line="199" />
-		</Folding>
-	</File>
-	<EditorTabsLayout layout="06125fe056bda18700398cc500000002=0;lirc_sunxi_rewrite:sunxi_lirc_new.h,*1;lirc_sunxi_rewrite:sunxi_lirc_new.c@layout2|name=dummy;caption=;state=2098174;dir=3;layer=0;row=0;pos=0;prop=100000;bestw=430;besth=283;minw=430;minh=283;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|name=06125fe056bda18700398cc500000002;caption=;state=2098172;dir=5;layer=0;row=0;pos=0;prop=100000;bestw=200;besth=200;minw=-1;minh=-1;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|dock_size(5,0,0)=202|" />
+	<EditorTabsLayout layout="063b0b0056c435ce004ae18800000002=0;lirc_sunxi_rewrite:sunxi_lirc_new.h,*1;lirc_sunxi_rewrite:sunxi_lirc_new.c@layout2|name=dummy;caption=;state=2098174;dir=3;layer=0;row=0;pos=0;prop=100000;bestw=462;besth=283;minw=462;minh=283;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|name=063b0b0056c435ce004ae18800000002;caption=;state=2098172;dir=5;layer=0;row=0;pos=0;prop=100000;bestw=200;besth=200;minw=-1;minh=-1;maxw=-1;maxh=-1;floatx=-1;floaty=-1;floatw=-1;floath=-1|dock_size(5,0,0)=202|" />
 </CodeBlocks_layout_file>

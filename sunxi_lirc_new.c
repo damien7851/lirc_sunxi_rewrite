@@ -190,48 +190,48 @@ static void ir_setup(void)
 //new handler
 static void ir_packet_handler(void)
 {
-    unsigned char pulse,dt,next_pulse,dt_next;
+    unsigned char pulse,pulse_pre;
+    unsigned char dt;
     int duration = 0;
-
+    pulse = 2; // non initailisé explicitement
+    pulse_pre = 2;
     #ifdef FIFO
     while (!kfifo_is_empty(&rawfifo))
     {
-        if (kfifo_out(&rawfifo,&dt,sizeof(dt))!=1) //kfifo_out lit la valeur et l'enléve de la fifo
-            break;
 
+        if (kfifo_out(&rawfifo,&dt,sizeof(dt))!=sizeof(dt))
+            {
+                //kfifo_out lit la valeur et l'enléve de la fifo
+                printk(KERN_INFO "Fifo empty error");
+                break;
+            }
+        pulse = 0x80 & dt;
 
-        pulse = (dt & 0x80) != 0; // donne la polarité du pulse
+        if (pulse == pulse_pre){
+            //new pulse or end pulse
+            duration += ((dt & 0x7f) + 1) * SUNXI_IR_SAMPLE;
+            pulse_pre=pulse;
 
-        if (kfifo_out_peek(&rawfifo,&dt_next,sizeof(dt))!=1) //kfifi_out_peek lit la valeur et l'enléve PAS de la fifo
-            break;
-
-        next_pulse = (dt_next & 0x80) != 0;
-
-        if (pulse == next_pulse)
-        {
-            /*si le pulse est de la méme polarité que le suivant
-            * alors on l'additionne au suivant
-            */
-            duration += ((dt_next & 0x7f) + 1) * SUNXI_IR_SAMPLE; // et sa durée
         }
-        else
-        {
-            if (duration == 0) //cas improblable ou un pulse est plus court que 127 echantillons
-                duration = ((dt & 0x7f) + 1) * SUNXI_IR_SAMPLE; // et sa durée
+        else {
+
 
             if (duration>PULSE_MASK)
             {
                 printk(KERN_INFO "pulse are %d and is too long",duration);
                 return;
             }
-            if (pulse==1)
-                duration |= PULSE_BIT; // on met le pulse à 1
+            if (pulse_pre!=0)
+                    duration |= PULSE_BIT; // on met le pulse à 1
             else
-                duration &= PULSE_MASK; //on met le pulse à 0
-#ifdef LIRC
+                    duration &= PULSE_MASK; //on met le pulse à 0
+            #ifdef LIRC
             lirc_buffer_write(&rbuf,(unsigned char*)&duration);
-#endif
-        }
+            #endif
+
+            duration = ((dt & 0x7f) + 1) * SUNXI_IR_SAMPLE;//the first duration
+            pulse_pre = pulse;
+            }
     }
     #else
     printk(KERN_INFO "FIFO désactivé mode test");
