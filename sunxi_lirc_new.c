@@ -214,24 +214,26 @@ static void ir_packet_handler(void)
 
         }
         else {
+        //fin ou debut de pulse
 
-
-            if (duration>PULSE_MASK)
-            {
-                printk(KERN_INFO "pulse are %d and is too long",duration);
-                return;
-            }
-            if (pulse_pre!=0)
+            if (pulse_pre!=2) {//si pas debut c'est la fin...
+                if (pulse_pre!=0)
                     duration |= PULSE_BIT; // on met le pulse à 1
-            else
+                else
                     duration &= PULSE_MASK; //on met le pulse à 0
-            #ifdef LIRC
-            lirc_buffer_write(&rbuf,(unsigned char*)&duration);
-            #endif
 
+                if (duration>PULSE_MASK)
+                {
+                    printk(KERN_INFO "pulse are %d and is too long",duration);
+                    return;
+                }
+                #ifdef LIRC
+                lirc_buffer_write(&rbuf,(unsigned char*)&duration);
+                #endif
+                }
             duration = ((dt & 0x7f) + 1) * SUNXI_IR_SAMPLE;//the first duration
             pulse_pre = pulse;
-            }
+        }
     }
     #else
     printk(KERN_INFO "FIFO désactivé mode test");
