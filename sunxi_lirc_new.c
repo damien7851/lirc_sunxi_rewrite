@@ -196,7 +196,7 @@ static void ir_packet_handler(void)
     int nb = 0;
     pulse = 2; // non initailisé explicitement
     pulse_pre = 2;
-    dprintk("handler start");
+    dprintk("handler start\n");
     #ifdef FIFO
     while (!kfifo_is_empty(&rawfifo))
     {
@@ -204,7 +204,7 @@ static void ir_packet_handler(void)
         if (kfifo_out(&rawfifo,&dt,sizeof(dt))!=sizeof(dt))
             {
                 //kfifo_out lit la valeur et l'enléve de la fifo
-                printk(KERN_INFO "Fifo empty error");
+                printk(KERN_INFO "Fifo empty error\n");
                 break;
             }
         pulse = (0x80 & dt) !=0;
@@ -219,7 +219,7 @@ static void ir_packet_handler(void)
         //fin ou debut de pulse
             if (duration>PULSE_MASK)
                 {
-                    printk(KERN_INFO "pulse are %d and is too long",duration);
+                    printk(KERN_INFO "pulse are %d and is too long\n",duration);
                     return;
                 }
             if (pulse_pre!=2) {//si pas debut c'est la fin...
@@ -230,19 +230,24 @@ static void ir_packet_handler(void)
 
 
                 #ifdef LIRC
+                if (lirc_buffer_full(&rbuf)) {
+                    /* no new signals will be accepted */
+                    dprintk("lirc Buffer overrun\n");
+                    return;
+                    }
                 lirc_buffer_write(&rbuf,(unsigned char*)&duration);
-                dprintk("stored sample %x and %d us pol %x",duration,duration&PULSE_MASK,duration&PULSE_BIT);
+                dprintk("stored sample %x and %d us pol %x\n",duration,duration&PULSE_MASK,duration&PULSE_BIT);
                 #endif
                 }
             duration = ((dt & 0x7f) + 1) * SUNXI_IR_SAMPLE;//the first duration
             pulse_pre = pulse;
-            dprintk("firts sample is %x and %d us pol %x",duration,duration&PULSE_MASK,duration&PULSE_BIT);
+            dprintk("firts sample is %x and %d us pol %x\n",duration,duration&PULSE_MASK,duration&PULSE_BIT);
         }
     }
     #else
     printk(KERN_INFO "FIFO désactivé mode test");
     #endif
-    dprintk("handler end %d sample take into acount",nb);
+    dprintk("handler end %d sample take into acount\n",nb);
     return;
 }
 
