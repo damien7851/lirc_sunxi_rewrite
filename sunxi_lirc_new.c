@@ -200,7 +200,7 @@ static void ir_packet_handler(void)
     #ifdef FIFO
     while (!kfifo_is_empty(&rawfifo))
     {
-        nb++;
+
         if (kfifo_out(&rawfifo,&dt,sizeof(dt))!=sizeof(dt))
             {
                 //kfifo_out lit la valeur et l'enléve de la fifo
@@ -237,17 +237,18 @@ static void ir_packet_handler(void)
                     }
                 lirc_buffer_write(&rbuf,(unsigned char*)&duration);
                 dprintk("stored sample %x and %d us pol %x\n",duration,duration&PULSE_MASK,duration&PULSE_BIT);
+                nb++;
                 #endif
                 }
             duration = ((dt & 0x7f) + 1) * SUNXI_IR_SAMPLE;//the first duration
             pulse_pre = pulse;
-            dprintk("firts sample is %x and %d us pol %x\n",duration,duration&PULSE_MASK,duration&PULSE_BIT);
+            //dprintk("firts sample is %x and %d us pol %x\n",duration,duration&PULSE_MASK,duration&PULSE_BIT);
         }
     }
     #else
     printk(KERN_INFO "FIFO désactivé mode test");
     #endif
-    dprintk("handler end %d sample take into acount\n",nb);
+    printk(KERN_INFO "handler end %d sample take into acount\n",nb);
     return;
 }
 
