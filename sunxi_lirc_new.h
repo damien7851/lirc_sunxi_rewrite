@@ -6,6 +6,8 @@
  */
 #ifndef SUNXI_LIRC_NEW_H_
 #define SUNXI_LIRC_NEW_H_
+#define GENMASK(h, l) \
+       (((~0UL) << (l)) & (~0UL >> (BITS_PER_LONG - 1 - (h))))
 #define LIRC
 #define LIRC_DRIVER_NAME "sunxi_lirc_new"
 #define IR_RAW_BUF_SIZE 512
@@ -62,21 +64,21 @@
 #define REG_CIR_ITHR(val)    (((val) << 8) & (GENMASK(15, 8)))
 
 /* Hardware supported fifo size */
-#define SUNXI_IR_FIFO_SIZE    16
+#define SUNXI_IR_FIFO_SIZE    16 //d'apres la datasheet 16 dans les progs il y a des incohérence dans la datasheet
 /* How many messages in FIFO trigger IRQ */
-#define TRIGGER_LEVEL         8
+#define TRIGGER_LEVEL         8 // la moitié de la taille
 /* Required frequency for IR0 or IR1 clock in CIR mode */
 #define SUNXI_IR_BASE_CLK     8000000
 /* Frequency after IR internal divider  */
 #define SUNXI_IR_CLK          (SUNXI_IR_BASE_CLK / 64)
-/* Sample period in ns */
-#define SUNXI_IR_SAMPLE       (1000000000ul / SUNXI_IR_CLK)
+/* Sample period in us */
+#define SUNXI_IR_SAMPLE       (1000000ul / SUNXI_IR_CLK) //cela donne 8µs
 /* Noise threshold in samples  */
 #define SUNXI_IR_RXNOISE      1
-/* Idle Threshold in samples */
-#define SUNXI_IR_RXIDLE       20
+/* Idle Threshold in samples *//* Idle Threshold = (20+1)*128*sample = ~21ms */
+#define SUNXI_IR_RXIDLE       20 //soit 21ms
 /* Time after which device stops sending data in ms */
-#define SUNXI_IR_TIMEOUT      120
+#define SUNXI_IR_TIMEOUT      120 //non utilisé
 #define dprintk(fmt, args...)                                        \
 do {                                                        \
 if (debug)                                        \
@@ -84,8 +86,7 @@ printk(KERN_DEBUG LIRC_DRIVER_NAME ": "        \
 fmt, ## args);                        \
 } while (0)
 
-#define GENMASK(h, l) \
-       (((~0UL) << (l)) & (~0UL >> (BITS_PER_LONG - 1 - (h))))
+
 #endif
 /* déclaration des fonction d'initailisation */
 //static int sunxi_ir_probe(struct platform_device * pdev);

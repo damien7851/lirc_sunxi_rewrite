@@ -91,7 +91,7 @@ static int debug=0;
 static void ir_clk_cfg(void)
 {
 
-	unsigned long rate = 3000000; /* 6 MHz */
+	unsigned long rate = SUNXI_IR_BASE_CLK; /* 8 MHz */
 
 
 
@@ -108,7 +108,7 @@ static void ir_clk_cfg(void)
 	}
 	dprintk("trying to set clock via SYS_CLK_CFG_EN, when no error follows -> succeeded\n");
 	if (clk_set_rate(ir_clk, rate))
-		printk("set ir0 clock freq to 6M failed\n");
+		printk("set ir0 clock freq to 8M failed\n");
 
 	if (clk_enable(apb_ir_clk))
 		printk("try to enable apb_ir_clk failed\n");
@@ -152,7 +152,7 @@ static void ir_reg_cfg(void)
     unsigned long tmp;
 	/* Enable CIR Mode */
     writel(REG_CTL_MD, IR_BASE + SUNXI_IR_CTL_REG);
-    /* Set noise threshold and idle threshold */
+    /* Set noise threshold and idle threshold and clock divisor*/
     writel(REG_CIR_NTHR(SUNXI_IR_RXNOISE) | REG_CIR_ITHR(SUNXI_IR_RXIDLE),
    IR_BASE  + SUNXI_IR_CIR_REG);
     /* Invert Input Signal */
@@ -193,19 +193,21 @@ static void ir_packet_handler(void)
     unsigned char pulse,pulse_pre;
     unsigned char dt;
     int duration = 0;
+    int nb = 0;
     pulse = 2; // non initailisé explicitement
     pulse_pre = 2;
+    dprintk("handler start");
     #ifdef FIFO
     while (!kfifo_is_empty(&rawfifo))
     {
-
+        nb++;
         if (kfifo_out(&rawfifo,&dt,sizeof(dt))!=sizeof(dt))
             {
                 //kfifo_out lit la valeur et l'enléve de la fifo
                 printk(KERN_INFO "Fifo empty error");
                 break;
             }
-        pulse = 0x80 & dt;
+        pulse = (0x80 & dt) !=0;
 
         if (pulse == pulse_pre){
             //new pulse or end pulse
@@ -215,29 +217,32 @@ static void ir_packet_handler(void)
         }
         else {
         //fin ou debut de pulse
-
+            if (duration>PULSE_MASK)
+                {
+                    printk(KERN_INFO "pulse are %d and is too long",duration);
+                    return;
+                }
             if (pulse_pre!=2) {//si pas debut c'est la fin...
                 if (pulse_pre!=0)
                     duration |= PULSE_BIT; // on met le pulse à 1
                 else
                     duration &= PULSE_MASK; //on met le pulse à 0
 
-                if (duration>PULSE_MASK)
-                {
-                    printk(KERN_INFO "pulse are %d and is too long",duration);
-                    return;
-                }
+
                 #ifdef LIRC
                 lirc_buffer_write(&rbuf,(unsigned char*)&duration);
+                dprintk("stored sample %x and %d us pol %x",duration,duration&PULSE_MASK,duration&PULSE_BIT);
                 #endif
                 }
             duration = ((dt & 0x7f) + 1) * SUNXI_IR_SAMPLE;//the first duration
             pulse_pre = pulse;
+            dprintk("firts sample is %x and %d us pol %x",duration,duration&PULSE_MASK,duration&PULSE_BIT);
         }
     }
     #else
     printk(KERN_INFO "FIFO désactivé mode test");
     #endif
+    dprintk("handler end %d sample take into acount",nb);
     return;
 }
 
@@ -266,7 +271,7 @@ static irqreturn_t ir_irq_service(int irqno, void *dev_id)
             dt = readb(IR_BASE + SUNXI_IR_RXFIFO_REG);
             #ifdef FIFO
             if (kfifo_in(&rawfifo,&dt,sizeof(dt))!=sizeof(dt)){
-            dprintk("raw fifo full ir frame lost");
+            printk(KERN_INFO "raw fifo full ir frame lost");
             kfifo_reset(&rawfifo);
             overflow_error = 1;
 
@@ -281,7 +286,7 @@ static irqreturn_t ir_irq_service(int irqno, void *dev_id)
         #ifdef FIFO
         kfifo_reset(&rawfifo);
         #endif
-        dprintk("hardware fifo overflow trame ir perdue");
+        printk(KERN_INFO "hardware fifo overflow trame ir perdue");
         overflow_error = 1;
     }
     else if (status & REG_RXINT_RPEI_EN)
