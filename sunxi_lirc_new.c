@@ -198,15 +198,9 @@ static void ir_packet_handler(void)
     pulse_pre = 2;
     dprintk("handler start\n");
     #ifdef FIFO
-    while (!kfifo_is_empty(&rawfifo))
+    while (kfifo_out(&rawfifo,&dt,sizeof(dt))==sizeof(dt))
     {
 
-        if (kfifo_out(&rawfifo,&dt,sizeof(dt))!=sizeof(dt))
-            {
-                //kfifo_out lit la valeur et l'enléve de la fifo
-                printk(KERN_INFO "Fifo empty error\n");
-                break;
-            }
         pulse = (0x80 & dt) !=0;
 
         if (pulse == pulse_pre){
