@@ -11,13 +11,13 @@
 #define LIRC
 #define LIRC_DRIVER_NAME "sunxi_lirc_new"
 #define IR_RAW_BUF_SIZE 512
-#define RBUF_LEN 256 // longueur du buffer raw c'est ici qu'es vidé la fifo
-/* le symbole LIRC permet de compilé le lien avec lirc_dev ce qui permet de débugger séparément*/
+#define RBUF_LEN 256 // longueur du buffer raw c'est ici qu'es vidÃ© la fifo
+/* le symbole LIRC permet de compilÃ© le lien avec lirc_dev ce qui permet de dÃ©bugger sÃ©parÃ©ment*/
 //#define LIRC
 /* Registers */
 #if 1
 /* base ir register */
-#define IR_BASE		(0xf1c21800) // à voir ou on l'utilise mais il faut c'est sur!
+#define IR_BASE		(0xf1c21800) // Ã  voir ou on l'utilise mais il faut c'est sur!
 /* IRQ */
 #define IR_IRQNO	(SW_INT_IRQNO_IR0)
 /* IR Control */
@@ -64,21 +64,26 @@
 #define REG_CIR_ITHR(val)    (((val) << 8) & (GENMASK(15, 8)))
 
 /* Hardware supported fifo size */
-#define SUNXI_IR_FIFO_SIZE    16 //d'apres la datasheet 16 dans les progs il y a des incohérence dans la datasheet
+#define SUNXI_IR_FIFO_SIZE    16 //d'apres la datasheet 16 dans les progs il y a des incohÃ©rence dans la datasheet
 /* How many messages in FIFO trigger IRQ */
-#define TRIGGER_LEVEL         8 // la moitié de la taille
+#define TRIGGER_LEVEL         8 // la moitiÃ© de la taille
 /* Required frequency for IR0 or IR1 clock in CIR mode */
 #define SUNXI_IR_BASE_CLK     8000000
 /* Frequency after IR internal divider  */
 #define SUNXI_IR_CLK          (SUNXI_IR_BASE_CLK / 64)
 /* Sample period in us */
-#define SUNXI_IR_SAMPLE       (1000000ul / SUNXI_IR_CLK) //cela donne 8µs
+#define SUNXI_IR_SAMPLE       (1000000ul / SUNXI_IR_CLK) //cela donne 8Âµs
 /* Noise threshold in samples  */
 #define SUNXI_IR_RXNOISE      1
 /* Idle Threshold in samples *//* Idle Threshold = (20+1)*128*sample = ~21ms */
 #define SUNXI_IR_RXIDLE       20 //soit 21ms
 /* Time after which device stops sending data in ms */
-#define SUNXI_IR_TIMEOUT      120 //non utilisé
+#define SUNXI_IR_TIMEOUT      120 //non utilisÃ©
+#define NEC_HEADER            0x01002328
+#define NEC_MAX_HEADER        9100 //us
+#define NEC_MIN_HEADER        8500 //us
+#define NEC_MIN_SPACE_REPEAT  2100
+#define NEC_MAX_SPACE_REPEAT  2300
 #define dprintk(fmt, args...)                                        \
 do {                                                        \
 if (debug)                                        \
@@ -88,10 +93,10 @@ fmt, ## args);                        \
 
 
 #endif
-/* déclaration des fonction d'initailisation */
+/* dÃ©claration des fonction d'initailisation */
 //static int sunxi_ir_probe(struct platform_device * pdev);
 //static int sunxi_ir_remove(struct platform_device * pdev);
-///* les données du driver */
+///* les donnÃ©es du driver */
 //
 //struct ir_raw_pulse {
 // 	unsigned char pulse;
@@ -104,7 +109,7 @@ fmt, ## args);                        \
 //struct sunxi_ir {
 //	spinlock_t      ir_lock;
 //	void __iomem    *base;//cela doit etre l'adresse de base du driver
-//	u32             irq;//vérifier dans quel lib c'est déclaré
+//	u32             irq;//vÃ©rifier dans quel lib c'est dÃ©clarÃ©
 //	struct clk      *clk;
 //	struct clk      *apb_clk;
 //	struct ir_raw_buffer rawbuf;

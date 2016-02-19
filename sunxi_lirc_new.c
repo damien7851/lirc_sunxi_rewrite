@@ -63,7 +63,14 @@ static struct clk *apb_ir_clk;
 static struct clk *ir_clk;
 static u32 ir_gpio_hdle;
 //static unsigned long time;
-
+enum handler_state {
+	STATE_START,
+	STATE_PULSE_CAT,
+	STATE_END_PULSE,
+	STATE_NEC_HEADER_PULSE,
+	STATE_NEC_REPEAT_SPACE,
+	STATE_STORE,
+};
 
 
 
@@ -192,56 +199,106 @@ static void ir_packet_handler(void)
 {
     unsigned char pulse,pulse_pre;
     unsigned char dt;
-    int duration = 0;
-    int nb = 0;
+    enum handler_state state;
+    static const int header = NEC_HEADER;
+    int duration,nec,nb;
+    nb = 0;
+    nec = 0;
+    duration = 0;
     pulse = 2; // non initailisé explicitement
     pulse_pre = 2;
+    state = STATE_START;
+
     dprintk("handler start\n");
-    #ifdef FIFO
+
     while (kfifo_out(&rawfifo,&dt,sizeof(dt))==sizeof(dt))
     {
 
         pulse = (0x80 & dt) !=0;
+        switch (state) {
+            case STATE_START :
+                duration = ((dt & 0x7f) + 1) * SUNXI_IR_SAMPLE;//the first duration
+                pulse_pre = pulse;
+                state = STATE_PULSE_CAT;
+                break;
 
-        if (pulse == pulse_pre){
-            //new pulse or end pulse
-            duration += ((dt & 0x7f) + 1) * SUNXI_IR_SAMPLE;
-            pulse_pre=pulse;
+            case STATE_PULSE_CAT:
+                if (pulse == pulse_pre){
+                    //new pulse or end pulse
+                    duration += ((dt & 0x7f) + 1) * SUNXI_IR_SAMPLE;
+                    pulse_pre=pulse;
+                    state = STATE_PULSE_CAT;
+                    }
+                    else
+                    state = STATE_END_PULSE;
+                break;
 
-        }
-        else {
-        //fin ou debut de pulse
-            if (duration>PULSE_MASK)
-                {
-                    printk(KERN_INFO "pulse are %d and is too long\n",duration);
+            case STATE_END_PULSE :
+            //test max length
+                if (duration>PULSE_MASK)
+                    {
+                        printk(KERN_INFO "pulse are %d and is too long\n",duration);
+                        state = STATE_START;
+                        break;
+                    }
+            //test NEC HEADER
+                if (duration>NEC_MIN_HEADER && duration<NEC_MAX_HEADER){
+                        state = STATE_NEC_HEADER_PULSE;
+                        dprintk("NEC remote detected");
+                        break;
+                    }
+            //test NEC repeat
+                if (duration>NEC_MIN_SPACE_REPEAT && duration<NEC_MAX_SPACE_REPEAT)
+                    {
+                        state = STATE_NEC_REPEAT_SPACE;
+                        dprintk("NEC remote repeat detected");
+                        break;
+                    }
+                if (nec == 1){
+                    if (lirc_buffer_full(&rbuf)) {
+                    /* no new signals will be accepted */
+                    dprintk("lirc Buffer overrun\n");
                     return;
-                }
-            if (pulse_pre!=2) {//si pas debut c'est la fin...
+                        }
+                        //on stocke le header perdu
+                    lirc_buffer_write(&rbuf,(unsigned char*)&header);
+                    }
+                state = STATE_STORE;
+                break;
+
+            case STATE_STORE :
+            //set pulse bit
                 if (pulse_pre!=0)
-                    duration |= PULSE_BIT; // on met le pulse à 1
+                        duration |= PULSE_BIT; // on met le pulse à 1
                 else
-                    duration &= PULSE_MASK; //on met le pulse à 0
-
-
-                #ifdef LIRC
+                        duration &= PULSE_MASK; //on met le pulse à 0
+            //test buffer
                 if (lirc_buffer_full(&rbuf)) {
                     /* no new signals will be accepted */
                     dprintk("lirc Buffer overrun\n");
                     return;
                     }
+            //write buffer
                 lirc_buffer_write(&rbuf,(unsigned char*)&duration);
                 dprintk("stored sample %x and %d us pol %x\n",duration,duration&PULSE_MASK,duration&PULSE_BIT);
                 nb++;
-                #endif
-                }
-            duration = ((dt & 0x7f) + 1) * SUNXI_IR_SAMPLE;//the first duration
-            pulse_pre = pulse;
-            //dprintk("firts sample is %x and %d us pol %x\n",duration,duration&PULSE_MASK,duration&PULSE_BIT);
+                state = STATE_START;
+                break;
+
+            case STATE_NEC_HEADER_PULSE:
+                nec = 1;
+                state = STATE_START;
+                break;
+
+            case STATE_NEC_REPEAT_SPACE:
+                state = STATE_START;
+                nec = 0;
+                dprintk("nec repeat destroy");
+                break;
         }
     }
-    #else
-    printk(KERN_INFO "FIFO désactivé mode test");
-    #endif
+
+
     printk(KERN_INFO "handler end %d sample take into acount\n",nb);
     return;
 }
