@@ -24,7 +24,9 @@
 #include <mach/hardware.h>
 #include <plat/sys_config.h>
 #include <linux/clk.h>
+#include <linux/of.h>
 #include "sunxi_lirc_new.h"
+
 
 #define SUNXI_IR_DRIVER_NAME	"ir-rc-recv"
 #define SUNXI_IR_DEVICE_NAME	"sunxi_ir_recv"
@@ -37,6 +39,7 @@ struct sunxi_ir {
 	struct clk      *clk;
 	struct clk      *apb_clk;
 	u32             ir_gpio_hdle;
+	const char      *map_name;
 
 
 };
@@ -86,9 +89,11 @@ static irqreturn_t sunxi_ir_recv_irq(int irq, void *dev_id)
 static int __devinit sunxi_ir_recv_probe(struct platform_device *pdev)
 {
 	struct sunxi_ir *sunxi_dev;
+	struct device *dev = &pdev->dev;
 	struct rc_dev *rcdev;
 	const struct sunxi_ir_recv_platform_data *pdata =
 					pdev->dev.platform_data;
+    struct device_node *dn = dev->of_node;
 	int rc;
 	unsigned long tmp;
 	unsigned long rate = SUNXI_IR_BASE_CLK; /* 8 MHz */
@@ -108,13 +113,21 @@ static int __devinit sunxi_ir_recv_probe(struct platform_device *pdev)
 		rc = -ENOMEM;
 		goto err_allocate_device;
 	}
-
+    sunxi_dev->map_name = of_get_property(dn, "linux,rc-map-name", NULL);
 	rcdev->driver_type = RC_DRIVER_IR_RAW;
 	rcdev->allowed_protos = RC_TYPE_ALL;
 	rcdev->input_name = SUNXI_IR_DEVICE_NAME;
 	rcdev->input_id.bustype = BUS_HOST;
 	rcdev->driver_name = SUNXI_IR_DRIVER_NAME;
-	rcdev->map_name = RC_MAP_EMPTY;
+	rcdev->map_name = sunxi_dev->map_name ?: RC_MAP_EMPTY;
+	rcdev->input_phys = "sunxi-ir/input0";
+	rcdev->input_id.vendor = 0x0001;
+	rcdev->input_id.product = 0x0001;
+	rcdev->input_id.version = 0x0100;
+    rcdev->dev.parent = dev;
+    rcdev->rx_resolution = SUNXI_IR_SAMPLE;
+    rcdev->timeout = MS_TO_NS(SUNXI_IR_TIMEOUT);
+	rcdev->priv = sunxi_dev;
 
 	sunxi_dev->rcdev = rcdev;
 
@@ -178,7 +191,7 @@ static int __devinit sunxi_ir_recv_probe(struct platform_device *pdev)
     writel(tmp | REG_CTL_GEN | REG_CTL_RXEN, IR_BASE + SUNXI_IR_CTL_REG);
     printk(KERN_INFO "initialized sunXi IR driver\n");
 
-	dprintk("ir_setup: ir setup end!!\n");
+	printk(KERN_INFO "ir_setup: ir setup end!!\n");
 
     /*rc dev stuf */
 	rc = rc_register_device(rcdev);
@@ -188,7 +201,7 @@ static int __devinit sunxi_ir_recv_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, sunxi_dev);
-
+    printk(KERN_INFO "device registred\n");
 
 	return 0;
 
