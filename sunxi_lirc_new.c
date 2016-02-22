@@ -10,8 +10,8 @@
  * GNU General Public License for more details.
  */
 
-#include <linux/kernel.h>
-#include <linux/init.h>
+//#include <linux/kernel.h>
+//#include <linux/init.h>
 #include <linux/module.h>
 #include <linux/interrupt.h>
 #include <linux/slab.h>
@@ -51,6 +51,7 @@ static irqreturn_t sunxi_ir_recv_irq(int irq, void *dev_id)
 	unsigned int cnt, rc;
 	struct sunxi_ir *ir = dev_id;
 	DEFINE_IR_RAW_EVENT(rawir);
+
 	spin_lock(&ir->ir_lock);
 
 	status = readl(IR_BASE + SUNXI_IR_RXSTA_REG);
@@ -86,20 +87,24 @@ static irqreturn_t sunxi_ir_recv_irq(int irq, void *dev_id)
 
 }
 
-static int __devinit sunxi_ir_recv_probe(struct platform_device *pdev)
+static int  sunxi_ir_recv_probe(struct platform_device *pdev) //__devinit
 {
-	struct sunxi_ir *sunxi_dev;
+	int rc = 0;//variable de retour
+	unsigned long tmp = 0; //variable temporaire pour le calcul des registres
+
 	struct device *dev = &pdev->dev;
-	struct rc_dev *rcdev;
-	const struct sunxi_ir_recv_platform_data *pdata =
-					pdev->dev.platform_data;
-    struct device_node *dn = dev->of_node;
-	int rc;
-	unsigned long tmp;
+	struct device_node *dn = dev->of_node;
+	struct sunxi_ir *sunxi_dev;
+
+	//struct rc_dev *rcdev;
+	//const struct sunxi_ir_recv_platform_data *pdata =
+	//				pdev->dev.platform_data;
+
+
 	unsigned long rate = SUNXI_IR_BASE_CLK; /* 8 MHz */
 
-	if (!pdata)
-		return -EINVAL;
+	//if (!pdata)
+	//	return -EINVAL;
 
 	/*if (pdata->gpio_nr < 0) ///un test sur le contenu des data
 		return -EINVAL;*/
@@ -108,44 +113,11 @@ static int __devinit sunxi_ir_recv_probe(struct platform_device *pdev)
 	if (!sunxi_dev)
 		return -ENOMEM;
 
-	rcdev = rc_allocate_device();
-	if (!rcdev) {
-		rc = -ENOMEM;
-		goto err_allocate_device;
-	}
-    sunxi_dev->map_name = of_get_property(dn, "linux,rc-map-name", NULL);
-	rcdev->driver_type = RC_DRIVER_IR_RAW;
-	rcdev->allowed_protos = RC_TYPE_ALL;
-	rcdev->input_name = SUNXI_IR_DEVICE_NAME;
-	rcdev->input_id.bustype = BUS_HOST;
-	rcdev->driver_name = SUNXI_IR_DRIVER_NAME;
-	rcdev->map_name = sunxi_dev->map_name ?: RC_MAP_EMPTY;
-	rcdev->input_phys = "sunxi-ir/input0";
-	rcdev->input_id.vendor = 0x0001;
-	rcdev->input_id.product = 0x0001;
-	rcdev->input_id.version = 0x0100;
-    rcdev->dev.parent = dev;
-    rcdev->rx_resolution = SUNXI_IR_SAMPLE;
-    rcdev->timeout = MS_TO_NS(SUNXI_IR_TIMEOUT);
-	rcdev->priv = sunxi_dev;
-
-	sunxi_dev->rcdev = rcdev;
-
-
-
 	/*debut initialisation hardware */
-
-	sunxi_dev->irq = IR_IRQNO;
-	if (request_irq(sunxi_dev->irq, sunxi_ir_recv_irq, 0, "RemoteIR",
-			sunxi_dev)) {
-		rc = -EBUSY;
-		goto exit_irq;
-	}
 	dprintk("ir_setup: ir setup start!!\n");
-	sunxi_dev->ir_gpio_hdle = gpio_request_ex("ir_para", "ir0_rx");
-	if (0 == sunxi_dev->ir_gpio_hdle)
-		printk(KERN_ERR "try to request ir_para gpio failed\n");
 
+
+    /*Clock */
 	sunxi_dev->apb_clk = clk_get(NULL, "apb_ir0");
 	if (!sunxi_dev->apb_clk) {
 		printk(KERN_ERR "try to get apb_ir0 clock failed\n");
@@ -169,6 +141,52 @@ static int __devinit sunxi_ir_recv_probe(struct platform_device *pdev)
 
 	if (clk_enable(sunxi_dev->clk))
 		printk(KERN_ERR "try to enable apb_ir_clk failed\n");
+
+
+
+    sunxi_dev->rcdev = rc_allocate_device();
+
+	if (!sunxi_dev->rcdev) {
+		rc = -ENOMEM;
+		goto err_allocate_device;
+	}
+    //
+	sunxi_dev->rcdev->priv = sunxi_dev;
+	sunxi_dev->rcdev->input_name = SUNXI_IR_DEVICE_NAME;
+	sunxi_dev->rcdev->input_phys = "sunxi-ir/input0";
+	sunxi_dev->rcdev->input_id.bustype = BUS_HOST;
+	sunxi_dev->rcdev->input_id.vendor = 0x0001;
+	sunxi_dev->rcdev->input_id.product = 0x0001;
+	sunxi_dev->rcdev->input_id.version = 0x0100;
+	sunxi_dev->map_name = of_get_property(dn, "linux,rc-map-name", NULL);
+	sunxi_dev->rcdev->map_name = sunxi_dev->map_name ?: RC_MAP_EMPTY;
+	sunxi_dev->rcdev->dev.parent = dev;
+	sunxi_dev->rcdev->driver_type = RC_DRIVER_IR_RAW;
+	sunxi_dev->rcdev->allowed_protos = RC_TYPE_ALL;
+	sunxi_dev->rcdev->rx_resolution = SUNXI_IR_SAMPLE;
+	sunxi_dev->rcdev->timeout = MS_TO_NS(SUNXI_IR_TIMEOUT);
+	sunxi_dev->rcdev->driver_name = SUNXI_IR_DRIVER_NAME;
+
+	rc = rc_register_device(sunxi_dev->rcdev);
+	if (rc < 0) {
+		dev_err(&pdev->dev, "failed to register rc device\n");
+		goto err_register_rc_device;
+	}
+	platform_set_drvdata(pdev, sunxi_dev);
+    printk(KERN_INFO "device registred\n");
+
+     /*IRQ */
+	sunxi_dev->irq = IR_IRQNO;
+	if (request_irq(sunxi_dev->irq, sunxi_ir_recv_irq, 0, SUNXI_IR_DRIVER_NAME,
+			sunxi_dev)) {
+		rc = -EBUSY;
+		goto err_register_rc_device;
+	}
+
+	sunxi_dev->ir_gpio_hdle = gpio_request_ex("ir_para", "ir0_rx");
+	if (0 == sunxi_dev->ir_gpio_hdle)
+		printk(KERN_ERR "try to request ir_para gpio failed\n");
+
 
 	/* Enable CIR Mode */
     writel(REG_CTL_MD, IR_BASE + SUNXI_IR_CTL_REG);
@@ -194,14 +212,6 @@ static int __devinit sunxi_ir_recv_probe(struct platform_device *pdev)
 	printk(KERN_INFO "ir_setup: ir setup end!!\n");
 
     /*rc dev stuf */
-	rc = rc_register_device(rcdev);
-	if (rc < 0) {
-		dev_err(&pdev->dev, "failed to register rc device\n");
-		goto err_register_rc_device;
-	}
-
-	platform_set_drvdata(pdev, sunxi_dev);
-    printk(KERN_INFO "device registred\n");
 
 	return 0;
 
@@ -210,22 +220,33 @@ err_register_rc_device:
 exit_clk:
     clk_put(sunxi_dev->apb_clk);
 exit_clk_apb:
-	free_irq(sunxi_dev->irq, sunxi_dev);
-exit_irq:
-	rc_free_device(rcdev);
-	rcdev = NULL;
+	rc_free_device(sunxi_dev->rcdev);
+
 err_allocate_device:
 	kfree(sunxi_dev);
 	return rc;
 }
 
-static int __devexit sunxi_ir_recv_remove(struct platform_device *pdev)
+static int  sunxi_ir_recv_remove(struct platform_device *pdev)//__devexit
 {
+    unsigned long flags;
 	struct sunxi_ir *sunxi_dev = platform_get_drvdata(pdev);
-    free_irq(sunxi_dev->irq, sunxi_dev);
-	gpio_release(sunxi_dev->ir_gpio_hdle, 2);
+
 	clk_put(sunxi_dev->apb_clk);
 	clk_put(sunxi_dev->clk);
+
+	spin_lock_irqsave(&sunxi_dev->ir_lock, flags);
+	/* disable IR IRQ */
+	writel(0, IR_BASE + SUNXI_IR_RXINT_REG);
+	/* clear All Rx Interrupt Status */
+	writel(REG_RXSTA_CLEARALL, IR_BASE + SUNXI_IR_RXSTA_REG);
+	/* disable IR */
+	writel(0, IR_BASE + SUNXI_IR_CTL_REG);
+	spin_unlock_irqrestore(&sunxi_dev->ir_lock, flags);
+
+    free_irq(sunxi_dev->irq, sunxi_dev);
+	gpio_release(sunxi_dev->ir_gpio_hdle, 2);
+
 	platform_set_drvdata(pdev, NULL);
 	rc_unregister_device(sunxi_dev->rcdev);
 	rc_free_device(sunxi_dev->rcdev);
@@ -236,14 +257,14 @@ static int __devexit sunxi_ir_recv_remove(struct platform_device *pdev)
 
 static struct platform_driver sunxi_ir_recv_driver = {
 	.probe  = sunxi_ir_recv_probe,
-	.remove = __devexit_p(sunxi_ir_recv_remove),
+	.remove = sunxi_ir_recv_remove,//__devexit_p()
 	.driver = {
 		.name   = SUNXI_IR_DRIVER_NAME,
 		.owner  = THIS_MODULE,
 	},
 };
 
-static int __init sunxi_ir_recv_init(void)
+/*static int __init sunxi_ir_recv_init(void)
 {
 	return platform_driver_register(&sunxi_ir_recv_driver);
 }
@@ -253,9 +274,11 @@ static void __exit sunxi_ir_recv_exit(void)
 {
 	platform_driver_unregister(&sunxi_ir_recv_driver);
 }
-module_exit(sunxi_ir_recv_exit);
+module_exit(sunxi_ir_recv_exit);*/
 
-MODULE_DESCRIPTION("SUNXI IR Receiver driver");
+module_platform_driver(sunxi_ir_recv_driver);
+
+MODULE_DESCRIPTION("SUNXI IR Receiver driver with input rc");
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Damien Pageot");
 module_param(debug, int, S_IRUGO | S_IWUSR);
