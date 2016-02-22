@@ -282,5 +282,7 @@ MODULE_DESCRIPTION("SUNXI IR Receiver driver with input rc");
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Damien Pageot");
 module_param(debug, int, S_IRUGO | S_IWUSR);
+module_param(rc_core_debug, int, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(debug, "Enable debugging messages");
+MODULE_PARM_DESC(rc_core_debug, "Enable debugging messages for rc core level 0 to 2");
 
