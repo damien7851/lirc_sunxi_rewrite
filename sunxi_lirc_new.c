@@ -44,6 +44,8 @@ struct sunxi_ir {
 
 };
 static int debug = 0;
+
+static struct platform_device *ir_sunxi_dev;
 static irqreturn_t sunxi_ir_recv_irq(int irq, void *dev_id)
 {
 	unsigned long status;
@@ -264,19 +266,47 @@ static struct platform_driver sunxi_ir_recv_driver = {
 	},
 };
 
-/*static int __init sunxi_ir_recv_init(void)
+static int __init sunxi_ir_recv_init(void)
 {
-	return platform_driver_register(&sunxi_ir_recv_driver);
+	/*les fonction device alloc et device regsiter devaris etre remplacer par une description static 
+	dans arm/arch/plat-sunxi/devices.c */
+	int rc = 0;
+
+	rc = platform_driver_register(&sunxi_ir_recv_driver);
+	if (rc) {
+            printk(KERN_ERR SUNXI_IR_DRIVER_NAME
+                   ": rc core register returned %d\n", rc);
+            goto register_fail;
+    }
+    /* il vaudrait mieux remplir une structure device ce qui permeterrais d'ajouter les resources 
+    et apeller platform_device_register à la place des deux fonction _device_*/
+    ir_sunxi_dev = platform_device_alloc(SUNXI_IR_DRIVER_NAME, 0);
+    if (!ir_sunxi_dev) {
+            rc = -ENOMEM;
+            goto exit_driver_unregister;
+    }
+	
+	rc = platform_device_add(ir_sunxi_dev);	
+	if (rc) {
+    	platform_device_put(ir_sunxi_dev);
+    	goto exit_driver_unregister;
+    }
+	return 0;
+	exit_driver_unregister:
+	platform_driver_unregister(&sunxi_ir_recv_driver);
+	register_fail:
+	return rc;
 }
 module_init(sunxi_ir_recv_init);
 
 static void __exit sunxi_ir_recv_exit(void)
 {
+	platform_device_unregister(ir_sunxi_dev);
 	platform_driver_unregister(&sunxi_ir_recv_driver);
 }
-module_exit(sunxi_ir_recv_exit);*/
+module_exit(sunxi_ir_recv_exit);
 
-module_platform_driver(sunxi_ir_recv_driver);
+//module_platform_driver(sunxi_ir_recv_driver);
 
 MODULE_DESCRIPTION("SUNXI IR Receiver driver with input rc");
 MODULE_LICENSE("GPL v2");
