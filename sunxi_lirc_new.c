@@ -28,8 +28,8 @@
 #include "sunxi_lirc_new.h"
 
 
-#define SUNXI_IR_DRIVER_NAME	"ir-rc-recv"
-#define SUNXI_IR_DEVICE_NAME	"sunxi_ir_recv"
+#define SUNXI_IR_DRIVER_NAME	"sunxi-ir-rc-driver"
+#define SUNXI_IR_DEVICE_NAME	"sunxi_ir_device"
 
 struct sunxi_ir {
 
@@ -268,7 +268,7 @@ static struct platform_driver sunxi_ir_recv_driver = {
 
 static int __init sunxi_ir_recv_init(void)
 {
-	/*les fonction device alloc et device regsiter devaris etre remplacer par une description static 
+	/*les fonction device alloc et device regsiter devaris etre remplacer par une description static
 	dans arm/arch/plat-sunxi/devices.c */
 	int rc = 0;
 
@@ -278,15 +278,15 @@ static int __init sunxi_ir_recv_init(void)
                    ": rc core register returned %d\n", rc);
             goto register_fail;
     }
-    /* il vaudrait mieux remplir une structure device ce qui permeterrais d'ajouter les resources 
+    /* il vaudrait mieux remplir une structure device ce qui permeterrais d'ajouter les resources
     et apeller platform_device_register à la place des deux fonction _device_*/
     ir_sunxi_dev = platform_device_alloc(SUNXI_IR_DRIVER_NAME, 0);
     if (!ir_sunxi_dev) {
             rc = -ENOMEM;
             goto exit_driver_unregister;
     }
-	
-	rc = platform_device_add(ir_sunxi_dev);	
+
+	rc = platform_device_add(ir_sunxi_dev);
 	if (rc) {
     	platform_device_put(ir_sunxi_dev);
     	goto exit_driver_unregister;

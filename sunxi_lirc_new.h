@@ -72,7 +72,7 @@
 /* Frequency after IR internal divider  */
 #define SUNXI_IR_CLK          (SUNXI_IR_BASE_CLK / 64)
 /* Sample period in us */
-#define SUNXI_IR_SAMPLE       (1000000ul / SUNXI_IR_CLK) //cela donne 8µs
+#define SUNXI_IR_SAMPLE       (1000000000ul / SUNXI_IR_CLK) //cela donne 8µs
 /* Noise threshold in samples  */
 #define SUNXI_IR_RXNOISE      1
 /* Idle Threshold in samples *//* Idle Threshold = (20+1)*128*sample = ~21ms */
