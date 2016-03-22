@@ -10,8 +10,7 @@
  * GNU General Public License for more details.
  */
 
-//#include <linux/kernel.h>
-//#include <linux/init.h>
+
 #include <linux/module.h>
 #include <linux/interrupt.h>
 #include <linux/slab.h>
@@ -89,33 +88,27 @@ static irqreturn_t sunxi_ir_recv_irq(int irq, void *dev_id)
 
 }
 
-static int  sunxi_ir_recv_probe(struct platform_device *pdev) //__devinit
+static int  sunxi_ir_recv_probe(struct platform_device *pdev)
 {
-	int rc = 0;//variable de retour
-	unsigned long tmp = 0; //variable temporaire pour le calcul des registres
+	int rc = 0;
+	unsigned long tmp = 0;
 
 	struct device *dev = &pdev->dev;
 	struct device_node *dn = dev->of_node;
 	struct sunxi_ir *sunxi_dev;
 
-	//struct rc_dev *rcdev;
-	//const struct sunxi_ir_recv_platform_data *pdata =
-	//				pdev->dev.platform_data;
+
 
 
 	unsigned long rate = SUNXI_IR_BASE_CLK; /* 8 MHz */
 
-	//if (!pdata)
-	//	return -EINVAL;
 
-	/*if (pdata->gpio_nr < 0) ///un test sur le contenu des data
-		return -EINVAL;*/
 
 	sunxi_dev = kzalloc(sizeof(struct sunxi_ir), GFP_KERNEL);
 	if (!sunxi_dev)
 		return -ENOMEM;
 
-	/*debut initialisation hardware */
+	/*start hardware initialization */
 	dprintk("ir_setup: ir setup start!!\n");
 
 
@@ -229,7 +222,7 @@ err_allocate_device:
 	return rc;
 }
 
-static int  sunxi_ir_recv_remove(struct platform_device *pdev)//__devexit
+static int  sunxi_ir_recv_remove(struct platform_device *pdev)
 {
     unsigned long flags;
 	struct sunxi_ir *sunxi_dev = platform_get_drvdata(pdev);
@@ -259,7 +252,7 @@ static int  sunxi_ir_recv_remove(struct platform_device *pdev)//__devexit
 
 static struct platform_driver sunxi_ir_recv_driver = {
 	.probe  = sunxi_ir_recv_probe,
-	.remove = sunxi_ir_recv_remove,//__devexit_p()
+	.remove = sunxi_ir_recv_remove,
 	.driver = {
 		.name   = SUNXI_IR_DRIVER_NAME,
 		.owner  = THIS_MODULE,
@@ -268,8 +261,11 @@ static struct platform_driver sunxi_ir_recv_driver = {
 
 static int __init sunxi_ir_recv_init(void)
 {
-	/*les fonction device alloc et device regsiter devaris etre remplacer par une description static
-	dans arm/arch/plat-sunxi/devices.c */
+	/* TODO :
+	function platform_device_alloc() and function platform_device_add() should be replac by a static description in file :
+	arm/arch/plat-sunxi/devices.c. in this case the driver will automatically load and more information,
+	for example the base address will be available to the driver. This is more correct than the actual coding.
+	*/
 	int rc = 0;
 
 	rc = platform_driver_register(&sunxi_ir_recv_driver);
@@ -278,8 +274,8 @@ static int __init sunxi_ir_recv_init(void)
                    ": rc core register returned %d\n", rc);
             goto register_fail;
     }
-    /* il vaudrait mieux remplir une structure device ce qui permeterrais d'ajouter les resources
-    et apeller platform_device_register à la place des deux fonction _device_*/
+    /* it would be better to complete a device structure which will add resources
+     and call platform_device_register instead of two _device_ function*/
     ir_sunxi_dev = platform_device_alloc(SUNXI_IR_DRIVER_NAME, 0);
     if (!ir_sunxi_dev) {
             rc = -ENOMEM;
@@ -306,7 +302,7 @@ static void __exit sunxi_ir_recv_exit(void)
 }
 module_exit(sunxi_ir_recv_exit);
 
-//module_platform_driver(sunxi_ir_recv_driver);
+
 
 MODULE_DESCRIPTION("SUNXI IR Receiver driver with input rc");
 MODULE_LICENSE("GPL v2");
